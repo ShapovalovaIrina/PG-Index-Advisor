@@ -34,6 +34,10 @@ class EnvironmentConfiguration(object):
         self.number_of_features = None
         self.number_of_actions = None
         self.evaluated_workloads_strs = []
+        self.globally_indexable_columns = []
+        self.single_column_flat_set = set()
+        self.globally_indexable_columns_flat = []
+        self.action_storage_consumptions = []
 
         self.ENVIRONMENT_RESULT_PATH = self.config["result_path"]
         self._create_environment_folder()
@@ -84,9 +88,24 @@ class EnvironmentConfiguration(object):
         self.globally_indexable_columns_flat = [item for sublist in self.globally_indexable_columns for item in sublist]
         logging.info(f"Feeding {len(self.globally_indexable_columns_flat)} candidates into the environments.")
 
+        # List of index storage consumption [8192, 8192, 0, 0 ...]
+        # First - one-column indexes, later - multi-column indexes
+        # Consumption multi-column consumption calculated as
+        # (size(multi-column) - size(multi-column[:-1]))
         self.action_storage_consumptions = utils.predict_index_sizes(
             self.globally_indexable_columns_flat, self.schema.db_config
         )
+
+        # TODO: workload_embedder
+
+        # TODO: where multi_validation_wl is used?
+        self.multi_validation_wl = []
+        if len(self.workload_generator.wl_validation) > 1:
+            for workloads in self.workload_generator.wl_validation:
+                self.multi_validation_wl.extend(
+                    self.rnd.sample(workloads, min(7, len(workloads)))
+                )
+
 
 
     def _init_time(self):
