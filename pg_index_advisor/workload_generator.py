@@ -62,7 +62,7 @@ class WorkloadGenerator(object):
         self.wl_validation = [None]
         self.wl_testing = [None]
 
-        # Why training is list, validation and testing is list of lists???
+        # TODO: Why training is list, validation and testing is list of lists???
         self.wl_training, self.wl_validation[0], self.wl_testing[0] = \
             self._generate_workloads(
                 workload_config["training_instances"],
@@ -97,7 +97,6 @@ class WorkloadGenerator(object):
             Take only the first one if there are multiple examples of the query type
             """
             file_queries = query_file.readlines()[:1]
-            file_queries = self._preprocess_queries(file_queries)
 
             queries.append(file_queries)
 
@@ -110,20 +109,6 @@ class WorkloadGenerator(object):
         assert len(queries) == self.number_of_query_classes
 
         return queries
-
-    @staticmethod
-    def _preprocess_queries(queries):
-        processed_queries = []
-        for query in queries:
-            # TODO: убрать limit???
-            query = query.replace("limit 100", "")
-            query = query.replace("limit 20", "")
-            query = query.replace("limit 10", "")
-            query = query.strip()
-
-            processed_queries.append(query)
-
-        return processed_queries
 
     def _select_indexable_columns(self):
         available_query_classes = tuple(self.available_query_classes)

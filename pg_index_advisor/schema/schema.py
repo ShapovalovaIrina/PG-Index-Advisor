@@ -23,19 +23,11 @@ class Schema(object):
         )
 
         self._read_tables()
+        self._filter_tables(filters.get("table", {}))
         self._read_columns_from_tables()
         self._read_existing_indexes()
+        self._filter_indexes(filters.get("index", {}))
         self._read_existing_views()
-
-        for (filter_name, filter_value) in filters.get("table", {}).items():
-            filter_class = getattr(importlib.import_module("pg_index_advisor.schema.filters"), filter_name)
-            filter_instance = filter_class(filter_value, self.db_config)
-            self.columns = filter_instance.apply_filter(self.tables, self.columns)
-
-        for (filter_name, filter_value) in filters.get("index", {}).items():
-            filter_class = getattr(importlib.import_module("pg_index_advisor.schema.filters"), filter_name)
-            filter_instance = filter_class(filter_value, self.db_config)
-            self.indexes = filter_instance.apply_filter(self.indexes)
 
     def _read_tables(self):
         tables = self.generation_connector.exec_fetch("""
@@ -101,3 +93,20 @@ class Schema(object):
             view = View(viewname, definition)
             self.views.append(view)
 
+    def _filter_tables(self, table_filters):
+        for (filter_name, filter_value) in table_filters.items():
+            filter_class = getattr(
+                importlib.import_module("pg_index_advisor.schema.filters"),
+                filter_name
+            )
+            filter_instance = filter_class(filter_value, self.db_config)
+            self.tables = filter_instance.apply_filter(self.tables)
+
+    def _filter_indexes(self, index_filters):
+        for (filter_name, filter_value) in index_filters.items():
+            filter_class = getattr(
+                importlib.import_module("pg_index_advisor.schema.filters"),
+                filter_name
+            )
+            filter_instance = filter_class(filter_value, self.db_config)
+            self.indexes = filter_instance.apply_filter(self.indexes)

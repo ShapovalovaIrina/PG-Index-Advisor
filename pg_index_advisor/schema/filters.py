@@ -16,27 +16,25 @@ class TableNumRowsFilter(object):
         )
         self.connector.create_statistics()
 
-    def apply_filter(self, tables, columns):
-        output_columns = []
+    def apply_filter(self, tables):
+        output_tables = []
 
         for table in tables:
-            table_name = table.name
             table_num_rows = self.connector.exec_fetch(
-                f"SELECT reltuples::bigint AS estimate FROM pg_class where relname='{table_name}'"
+                f"SELECT reltuples::bigint AS estimate FROM pg_class where relname='{table.name}'"
             )[0]
 
             if table_num_rows > self.threshold:
-                for column in table.columns:
-                    output_columns.append(column)
+                output_tables.append(table)
             else:
                 logging.info(
                     f"Skip the table {table.name} because " +
                     f"the number of rows is less than the threshold value."
                 )
 
-        logging.warning(f"Reduced columns from {len(columns)} to {len(output_columns)}.")
+        logging.warning(f"Reduced tables from {len(tables)} to {len(output_tables)}.")
 
-        return output_columns
+        return output_tables
 
 
 class TableNameFilter(object):
@@ -51,17 +49,16 @@ class TableNameFilter(object):
             autocommit=True
         )
 
-    def apply_filter(self, tables, columns):
-        output_columns = []
+    def apply_filter(self, tables):
+        output_tables = []
 
         for table in tables:
             if table.name in self.allowed_tables:
-                for column in table.columns:
-                    output_columns.append(column)
+                output_tables.append(table)
 
-        logging.warning(f"Reduced columns from {len(columns)} to {len(output_columns)}.")
+        logging.warning(f"Reduced tables from {len(tables)} to {len(output_tables)}.")
 
-        return output_columns
+        return output_tables
 
 
 class IndexConstraintFilter(object):
