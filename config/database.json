@@ -1,0 +1,57 @@
+{
+  "id": 1,
+  "description": "Just a test",
+  "random_seed": 1000,
+  "logging": "verbose",
+  "max_steps_per_episode": 1000,
+  "max_index_width": 2,
+  "result_path": "experiment_results",
+  "filter_utilized_columns": false,
+  "rl_algorithm": {
+    "algorithm": "PPO",
+    "gamma": 0.5,
+    "policy": "MlpPolicy",
+    "model_architecture": {
+      "net_arch": [
+        {
+          "vf": [256,256],
+          "pi": [256,256]
+        }
+      ]
+    }
+  },
+  "database": {
+    "database": "flexytests",
+    "username": "flexyservice",
+    "password": "flexypassword",
+    "hostname": "localhost",
+    "port": 5432
+  },
+  "workload": {
+    "size": 2,
+    "varying_frequencies": true,
+    "training_instances": 10,
+    "validation_testing": {
+      "number_of_workloads": 5
+    },
+    "excluded_query_classes": []
+  },
+  "filters": {
+    "table": {
+      "TableNumRowsFilter": {
+        "threshold": -1
+      },
+      "TableNameFilter": {
+        "allowed_tables": [
+          "user_application",
+          "policies"
+        ]
+      }
+    },
+    "index": {
+      "IndexConstraintFilter": {
+        "skip_primary_key": true
+      }
+    }
+  }
+}
