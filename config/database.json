@@ -25,7 +25,7 @@
     "username": "flexyservice",
     "password": "flexypassword",
     "hostname": "localhost",
-    "port": 5432
+    "port": 6543
   },
   "workload": {
     "size": 2,
@@ -35,6 +35,10 @@
       "number_of_workloads": 5
     },
     "excluded_query_classes": []
+  },
+  "budgets": {
+    "training": false,
+    "validation_and_testing": [500, 1000, 1500, 2500, 3500, 5000, 6500, 8000, 10000]
   },
   "filters": {
     "table": {

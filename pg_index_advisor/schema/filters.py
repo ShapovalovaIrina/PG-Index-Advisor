@@ -12,6 +12,7 @@ class TableNumRowsFilter(object):
             db_config["database"],
             db_config["username"],
             db_config["password"],
+            db_port=db_config["port"],
             autocommit=True
         )
         self.connector.create_statistics()
@@ -32,7 +33,8 @@ class TableNumRowsFilter(object):
                     f"the number of rows is less than the threshold value."
                 )
 
-        logging.warning(f"Reduced tables from {len(tables)} to {len(output_tables)}.")
+        logging.warning(f"Reduced tables from {len(tables)} to {len(output_tables)} " +
+                        f"by table rows amount filter.")
 
         return output_tables
 
@@ -46,6 +48,7 @@ class TableNameFilter(object):
             db_config["database"],
             db_config["username"],
             db_config["password"],
+            db_port=db_config["port"],
             autocommit=True
         )
 
@@ -56,7 +59,8 @@ class TableNameFilter(object):
             if table.name in self.allowed_tables:
                 output_tables.append(table)
 
-        logging.warning(f"Reduced tables from {len(tables)} to {len(output_tables)}.")
+        logging.warning(f"Reduced tables from {len(tables)} to {len(output_tables)} " +
+                        f"by table name filter.")
 
         return output_tables
 
@@ -71,6 +75,7 @@ class IndexConstraintFilter(object):
                 db_config["database"],
                 db_config["username"],
                 db_config["password"],
+                db_port=db_config["port"],
                 autocommit=True
             )
 
@@ -94,6 +99,7 @@ class IndexConstraintFilter(object):
             if not primary_key:
                 output_indexes.append(index)
 
-        logging.warning(f"Reduced indexes from {len(indexes)} to {len(output_indexes)}.")
+        logging.warning(f"Reduced indexes from {len(indexes)} to {len(output_indexes)} " +
+                        f"by skipping prmary keys.")
 
         return output_indexes

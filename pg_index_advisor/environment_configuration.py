@@ -1,6 +1,8 @@
 import logging
 import random
 import os
+import pickle
+import utils
 
 from configuration_parser import ConfigurationParser
 from datetime import datetime
@@ -58,6 +60,33 @@ class EnvironmentConfiguration(object):
             logging_mode=self.config["logging"]
         )
 
+        self._assign_budgets_to_workloads()
+        # TODO: для чего это?
+        self._pickle_workloads()
+
+        self.globally_indexable_columns = self.workload_generator.globally_indexable_columns
+
+        """
+        [
+            [single column indexes], 
+            [2-column combinations], 
+            [3-column combinations]
+            ...
+        ]
+        """
+        self.globally_indexable_columns = utils.create_column_permutation_indexes(
+            self.globally_indexable_columns,
+            self.config["max_index_width"]
+        )
+
+        self.single_column_flat_set = set(map(lambda x: x[0], self.globally_indexable_columns[0]))
+
+        self.globally_indexable_columns_flat = [item for sublist in self.globally_indexable_columns for item in sublist]
+        logging.info(f"Feeding {len(self.globally_indexable_columns_flat)} candidates into the environments.")
+
+        self.action_storage_consumptions = utils.predict_index_sizes(
+            self.globally_indexable_columns_flat, self.schema.db_config
+        )
 
 
     def _init_time(self):
@@ -84,3 +113,20 @@ class EnvironmentConfiguration(object):
                 "terminating here because we don't want to overwrite anything."
             )
 
+    def _assign_budgets_to_workloads(self):
+        # TODO: training budget?
+
+        for workload_list in self.workload_generator.wl_testing:
+            for workload in workload_list:
+                workload.budget = self.rnd.choice(self.config["budgets"]["validation_and_testing"])
+
+        for workload_list in self.workload_generator.wl_validation:
+            for workload in workload_list:
+                workload.budget = self.rnd.choice(self.config["budgets"]["validation_and_testing"])
+
+    def _pickle_workloads(self):
+        with open(f"{self.environment_folder_path}/testing_workloads.pickle", "wb") as handle:
+            pickle.dump(self.workload_generator.wl_testing, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open(f"{self.environment_folder_path}/validation_workloads.pickle", "wb") as handle:
+            pickle.dump(self.workload_generator.wl_validation, handle, protocol=pickle.HIGHEST_PROTOCOL)
