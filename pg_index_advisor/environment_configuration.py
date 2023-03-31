@@ -10,9 +10,9 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, sync_envs_normalization
 
-
 from schema.schema import Schema
 from workload_generator import WorkloadGenerator
+from embeddings.workload_embedder import PlanEmbedderLSI
 
 
 class EnvironmentConfiguration(object):
@@ -32,6 +32,7 @@ class EnvironmentConfiguration(object):
         self.workload_generator = None
         self.number_of_features = None
         self.number_of_actions = None
+        self.workload_embedder = None
         self.evaluated_workloads_strs = []
         self.globally_indexable_columns = []
         self.single_column_flat_set = set()
@@ -97,10 +98,17 @@ class EnvironmentConfiguration(object):
             self.config["logging"]
         )
 
-        # TODO: workload_embedder
+        if "workload_embedder" in self.config:
+            self.workload_embedder = PlanEmbedderLSI(
+                self.workload_generator.query_texts,
+                self.config["workload_embedder"]["representation_size"],
+                self.globally_indexable_columns,
+                self.schema.db_config
+            )
 
         # TODO: in original paper there is multi_validation_wl, needs to figure out why this is
-        assert len(self.workload_generator.wl_validation) == 1, "Expected wl_validation to be one element list"
+        assert len(self.workload_generator.wl_validation) == 1, \
+            "Expected wl_validation to be one element list"
 
     def _init_time(self):
         self.start_time = datetime.now()
