@@ -41,7 +41,6 @@ class ConfigurationParser(object):
                 "excluded_query_classes"
             ],
             "workload_embedder": [
-                "type",
                 "representation_size"
             ],
             "budgets": [

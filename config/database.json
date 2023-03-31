@@ -37,7 +37,6 @@
     "excluded_query_classes": []
   },
   "workload_embedder": {
-    "type": "PlanEmbedderLSIBOW",
     "representation_size": 8
   },
   "budgets": {

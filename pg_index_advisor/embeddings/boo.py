@@ -7,7 +7,8 @@ class BagOfOperators(object):
     def __init__(self):
         self.replacings = [(" ", ""), ("(", ""), (")", ""), ("[", ""), ("]", ""), ("::text", "")]
         self.remove_digits = str.maketrans("", "", digits)
-        # TODO: посмотреть еще операторы https://github.com/postgres/postgres/blob/master/src/backend/commands/explain.c#L814
+        # The operators of every plan that are relevant
+        # for index selection are transformed into a text representation.
         self.INTERESTING_OPERATORS = [
             "Seq Scan",
             "Hash Join",
@@ -31,8 +32,11 @@ class BagOfOperators(object):
         node_type = plan["Node Type"]
 
         if node_type in self.INTERESTING_OPERATORS:
-            # TODO: получаются иногда такие названия: IndexScan_user_application_type=ANDsubmitted_by=vehicle_id=
-            # посмотреть, окей ли это
+            # For example,
+            # under the presence of an index on TabA.Col4,
+            # a text representation
+            # IdxScan_TabA_Col4_Pred<
+            # might be generated
             node_representation = self._parse_node(plan)
             self.relevant_operators.append(node_representation)
         if "Plans" not in plan:
