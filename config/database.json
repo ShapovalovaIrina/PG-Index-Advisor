@@ -2,7 +2,7 @@
   "id": 1,
   "description": "Just a test",
   "random_seed": 1000,
-  "logging": "verbose",
+  "logging": "-",
   "max_steps_per_episode": 1000,
   "max_index_width": 2,
   "result_path": "experiment_results",

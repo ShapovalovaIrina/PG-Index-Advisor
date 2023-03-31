@@ -9,7 +9,7 @@ from index_selection_evaluation.selection.index import Index as PotentialIndex
 
 # Todo: This could be improved by passing index candidates as input
 # TODO: see TODO in simulate_index
-def predict_index_sizes(column_combinations, db_config):
+def predict_index_sizes(column_combinations, db_config, logging_mode):
     connector = UserPostgresDatabaseConnector(
         db_config["database"],
         db_config["username"],
@@ -40,9 +40,10 @@ def predict_index_sizes(column_combinations, db_config):
 
         parent_index_size_map[column_combination] = full_index_size
 
-    logging.info("Potential index sizes:")
-    for c, size in parent_index_size_map.items():
-        logging.info(f"Columns {c}: {size} bytes")
+    if logging_mode == "verbose":
+        logging.info("Potential index sizes:")
+        for c, size in parent_index_size_map.items():
+            logging.info(f"Columns {c}: {size} bytes")
 
     return predicted_index_sizes
 

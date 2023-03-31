@@ -1,7 +1,6 @@
 import logging
 import random
 import os
-import pickle
 import utils
 
 from configuration_parser import ConfigurationParser
@@ -65,8 +64,6 @@ class EnvironmentConfiguration(object):
         )
 
         self._assign_budgets_to_workloads()
-        # TODO: для чего это?
-        self._pickle_workloads()
 
         self.globally_indexable_columns = self.workload_generator.globally_indexable_columns
 
@@ -88,25 +85,22 @@ class EnvironmentConfiguration(object):
         self.globally_indexable_columns_flat = [item for sublist in self.globally_indexable_columns for item in sublist]
         logging.info(f"Feeding {len(self.globally_indexable_columns_flat)} candidates into the environments.")
 
-        # List of index storage consumption [8192, 8192, 0, 0 ...]
-        # First - one-column indexes, later - multi-column indexes
-        # Consumption multi-column consumption calculated as
-        # (size(multi-column) - size(multi-column[:-1]))
+        """
+        List of index storage consumption [8192, 8192, 0, 0 ...]
+        First - one-column indexes, later - multi-column indexes
+        Consumption multi-column consumption calculated as
+        (size(multi-column) - size(multi-column[:-1]))
+        """
         self.action_storage_consumptions = utils.predict_index_sizes(
-            self.globally_indexable_columns_flat, self.schema.db_config
+            self.globally_indexable_columns_flat,
+            self.schema.db_config,
+            self.config["logging"]
         )
 
         # TODO: workload_embedder
 
-        # TODO: where multi_validation_wl is used?
-        self.multi_validation_wl = []
-        if len(self.workload_generator.wl_validation) > 1:
-            for workloads in self.workload_generator.wl_validation:
-                self.multi_validation_wl.extend(
-                    self.rnd.sample(workloads, min(7, len(workloads)))
-                )
-
-
+        # TODO: in original paper there is multi_validation_wl, needs to figure out why this is
+        assert len(self.workload_generator.wl_validation) == 1, "Expected wl_validation to be one element list"
 
     def _init_time(self):
         self.start_time = datetime.now()
@@ -142,10 +136,3 @@ class EnvironmentConfiguration(object):
         for workload_list in self.workload_generator.wl_validation:
             for workload in workload_list:
                 workload.budget = self.rnd.choice(self.config["budgets"]["validation_and_testing"])
-
-    def _pickle_workloads(self):
-        with open(f"{self.environment_folder_path}/testing_workloads.pickle", "wb") as handle:
-            pickle.dump(self.workload_generator.wl_testing, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        with open(f"{self.environment_folder_path}/validation_workloads.pickle", "wb") as handle:
-            pickle.dump(self.workload_generator.wl_validation, handle, protocol=pickle.HIGHEST_PROTOCOL)
