@@ -14,6 +14,7 @@ class ConfigurationParser(object):
             "result_path",
             "database",
             "workload",
+            "workload_embedder",
             "filter_utilized_columns",
             "logging",
             "budgets"
@@ -38,6 +39,10 @@ class ConfigurationParser(object):
                 "training_instances",
                 "validation_testing",
                 "excluded_query_classes"
+            ],
+            "workload_embedder": [
+                "type",
+                "representation_size"
             ],
             "budgets": [
                 "training",

@@ -36,6 +36,10 @@
     },
     "excluded_query_classes": []
   },
+  "workload_embedder": {
+    "type": "PlanEmbedderLSIBOW",
+    "representation_size": 8
+  },
   "budgets": {
     "training": false,
     "validation_and_testing": [500, 1000, 1500, 2500, 3500, 5000, 6500, 8000, 10000]

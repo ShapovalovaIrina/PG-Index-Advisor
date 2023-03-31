@@ -2,3 +2,4 @@ stable_baselines3=1.7.0
 numpy~=1.21.6
 psycopg2~=2.9.5
 sql_metadata=2.7.0
+gensim~=4.2.0
