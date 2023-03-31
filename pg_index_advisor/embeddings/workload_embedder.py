@@ -127,7 +127,7 @@ class PlanEmbedder(WorkloadEmbedder):
         return embeddings
 
 
-class PlanEmbedderLSIBOW(PlanEmbedder):
+class PlanEmbedderLSI(PlanEmbedder):
     def __init__(
             self,
             query_texts,
@@ -153,18 +153,18 @@ class PlanEmbedderLSIBOW(PlanEmbedder):
         )
 
     def _create_model(self):
-        self.lsi_bow = gensim.models.LsiModel(
-            self.bow_corpus,
+        self.lsi_model = gensim.models.LsiModel(
+            corpus=self.bow_corpus,
             id2word=self.dictionary,
             num_topics=self.representation_size
         )
 
-        assert (len(self.lsi_bow.get_topics()) == self.representation_size), \
-            f"Topic-representation_size mismatch: {len(self.lsi_bow.get_topics())} " +\
+        assert (len(self.lsi_model.get_topics()) == self.representation_size), \
+            f"Topic-representation_size mismatch: {len(self.lsi_model.get_topics())} " +\
             f"vs {self.representation_size}"
 
     def _infer(self, bow, boo):
-        result = self.lsi_bow[bow]
+        result = self.lsi_model[bow]
 
         if len(result) == self.representation_size:
             vector = [x[1] for x in result]

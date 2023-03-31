@@ -12,7 +12,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, sync_env
 
 from schema.schema import Schema
 from workload_generator import WorkloadGenerator
-from embeddings.workload_embedder import PlanEmbedderLSIBOW
+from embeddings.workload_embedder import PlanEmbedderLSI
 
 
 class EnvironmentConfiguration(object):
@@ -99,7 +99,7 @@ class EnvironmentConfiguration(object):
         )
 
         if "workload_embedder" in self.config:
-            self.workload_embedder = PlanEmbedderLSIBOW(
+            self.workload_embedder = PlanEmbedderLSI(
                 self.workload_generator.query_texts,
                 self.config["workload_embedder"]["representation_size"],
                 self.globally_indexable_columns,
