@@ -1,6 +1,7 @@
 import logging
 import random
 import os
+import utils
 
 from configuration_parser import ConfigurationParser
 from datetime import datetime
@@ -32,6 +33,10 @@ class EnvironmentConfiguration(object):
         self.number_of_features = None
         self.number_of_actions = None
         self.evaluated_workloads_strs = []
+        self.globally_indexable_columns = []
+        self.single_column_flat_set = set()
+        self.globally_indexable_columns_flat = []
+        self.action_storage_consumptions = []
 
         self.ENVIRONMENT_RESULT_PATH = self.config["result_path"]
         self._create_environment_folder()
@@ -58,7 +63,44 @@ class EnvironmentConfiguration(object):
             logging_mode=self.config["logging"]
         )
 
+        self._assign_budgets_to_workloads()
 
+        self.globally_indexable_columns = self.workload_generator.globally_indexable_columns
+
+        """
+        [
+            [single column indexes], 
+            [2-column combinations], 
+            [3-column combinations]
+            ...
+        ]
+        """
+        self.globally_indexable_columns = utils.create_column_permutation_indexes(
+            self.globally_indexable_columns,
+            self.config["max_index_width"]
+        )
+
+        self.single_column_flat_set = set(map(lambda x: x[0], self.globally_indexable_columns[0]))
+
+        self.globally_indexable_columns_flat = [item for sublist in self.globally_indexable_columns for item in sublist]
+        logging.info(f"Feeding {len(self.globally_indexable_columns_flat)} candidates into the environments.")
+
+        """
+        List of index storage consumption [8192, 8192, 0, 0 ...]
+        First - one-column indexes, later - multi-column indexes
+        Consumption multi-column consumption calculated as
+        (size(multi-column) - size(multi-column[:-1]))
+        """
+        self.action_storage_consumptions = utils.predict_index_sizes(
+            self.globally_indexable_columns_flat,
+            self.schema.db_config,
+            self.config["logging"]
+        )
+
+        # TODO: workload_embedder
+
+        # TODO: in original paper there is multi_validation_wl, needs to figure out why this is
+        assert len(self.workload_generator.wl_validation) == 1, "Expected wl_validation to be one element list"
 
     def _init_time(self):
         self.start_time = datetime.now()
@@ -84,3 +126,13 @@ class EnvironmentConfiguration(object):
                 "terminating here because we don't want to overwrite anything."
             )
 
+    def _assign_budgets_to_workloads(self):
+        # TODO: training budget?
+
+        for workload_list in self.workload_generator.wl_testing:
+            for workload in workload_list:
+                workload.budget = self.rnd.choice(self.config["budgets"]["validation_and_testing"])
+
+        for workload_list in self.workload_generator.wl_validation:
+            for workload in workload_list:
+                workload.budget = self.rnd.choice(self.config["budgets"]["validation_and_testing"])

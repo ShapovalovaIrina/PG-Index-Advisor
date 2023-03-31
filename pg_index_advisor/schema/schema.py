@@ -19,6 +19,7 @@ class Schema(object):
             database_config["database"],
             database_config["username"],
             database_config["password"],
+            db_port=database_config["port"],
             autocommit=True
         )
 

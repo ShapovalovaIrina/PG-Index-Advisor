@@ -147,8 +147,7 @@ class WorkloadGenerator(object):
                 # TODO: but it is always just one query text per query class?
                 query_text = self.rnd.choice(self.query_texts[query_class - 1])
 
-                # FIXME frequency=frequency
-                query = Query(query_class, query_text)
+                query = Query(query_class, query_text, frequency=frequency)
 
                 self._store_indexable_columns(query)
                 assert len(query.columns) > 0, f"Query columns should have length > 0: {query.text}"
@@ -177,8 +176,6 @@ class WorkloadGenerator(object):
                 if table == view.name:
                     view_parser = Parser(view.definition)
                     query_columns.extend(self._resolve_columns(view_parser))
-                else:
-                    query_columns.extend(query_parser.columns)
 
         return query_columns
 

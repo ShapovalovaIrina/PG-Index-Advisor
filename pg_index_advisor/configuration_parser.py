@@ -15,7 +15,8 @@ class ConfigurationParser(object):
             "database",
             "workload",
             "filter_utilized_columns",
-            "logging"
+            "logging",
+            "budgets"
         ]
 
         self.REQUIRED_CONFIGURATION_OPTIONS_FURTHER = {
@@ -37,6 +38,10 @@ class ConfigurationParser(object):
                 "training_instances",
                 "validation_testing",
                 "excluded_query_classes"
+            ],
+            "budgets": [
+                "training",
+                "validation_and_testing"
             ]
         }
 
