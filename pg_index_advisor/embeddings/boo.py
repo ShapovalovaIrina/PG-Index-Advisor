@@ -1,3 +1,4 @@
+import json
 import re
 from string import digits
 
@@ -6,6 +7,7 @@ class BagOfOperators(object):
     def __init__(self):
         self.replacings = [(" ", ""), ("(", ""), (")", ""), ("[", ""), ("]", ""), ("::text", "")]
         self.remove_digits = str.maketrans("", "", digits)
+        # TODO: посмотреть еще операторы https://github.com/postgres/postgres/blob/master/src/backend/commands/explain.c#L814
         self.INTERESTING_OPERATORS = [
             "Seq Scan",
             "Hash Join",
@@ -29,6 +31,8 @@ class BagOfOperators(object):
         node_type = plan["Node Type"]
 
         if node_type in self.INTERESTING_OPERATORS:
+            # TODO: получаются иногда такие названия: IndexScan_user_application_type=ANDsubmitted_by=vehicle_id=
+            # посмотреть, окей ли это
             node_representation = self._parse_node(plan)
             self.relevant_operators.append(node_representation)
         if "Plans" not in plan:

@@ -12,31 +12,6 @@ from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector
 
 class WorkloadEmbedder(object):
     def __init__(self, query_texts, representation_size, database_connector, columns=None, retrieve_plans=False):
-        self.STOPTOKENS = [
-            "as",
-            "and",
-            "or",
-            "min",
-            "max",
-            "avg",
-            "join",
-            "on",
-            "substr",
-            "between",
-            "count",
-            "sum",
-            "case",
-            "then",
-            "when",
-            "end",
-            "else",
-            "select",
-            "from",
-            "where",
-            "by",
-            "cast",
-            "in",
-        ]
         self.INDEXES_SIMULATED_IN_PARALLEL = 1000
         self.query_texts = query_texts
         self.representation_size = representation_size
