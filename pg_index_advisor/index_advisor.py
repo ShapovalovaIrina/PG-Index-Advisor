@@ -157,7 +157,7 @@ class IndexAdvisor(object):
         else:
             os.makedirs(self.ENVIRONMENT_RESULT_PATH)
 
-        self.environment_folder_path = f"{self.ENVIRONMENT_RESULT_PATH}\ID_{self.id}"
+        self.environment_folder_path = f"{self.ENVIRONMENT_RESULT_PATH}/ID_{self.id}"
 
         if not os.path.exists(self.environment_folder_path):    
             os.mkdir(self.environment_folder_path)

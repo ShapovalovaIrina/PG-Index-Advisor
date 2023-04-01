@@ -10,15 +10,14 @@ from index_selection_evaluation.selection.utils import b_to_mb
 class ActionManager(object):
     def __init__(self, max_index_width, action_storage_consumptions):
         self.valid_actions = None
-        self._remaining_valid_actions = None
+        # List of valid actions (combinations) IDs
+        self._remaining_valid_actions = []
         self.number_of_actions = None
         self.current_actions_status = None
         self.number_of_columns = 0
         self.current_combinations = set()
         self.indexable_column_combinations_flat = []
         self.column_to_idx = {}
-
-        self.test_variable = None
 
         self.MAX_INDEX_WIDTH = max_index_width
         self.action_storage_consumptions = action_storage_consumptions
@@ -38,13 +37,9 @@ class ActionManager(object):
         self.current_actions_status = [0 for action in range(self.number_of_columns)]
 
         self.valid_actions = [self.FORBIDDEN_ACTION for actions in range(self.number_of_actions)]
-        # List of valid actions (combinations) IDs
-        self._remaining_valid_actions = []
 
         self._valid_actions_based_on_workload(workload)
         self._valid_actions_based_on_budget(budget, current_storage_consumption=0)
-
-        self.current_combinations = set()
 
         return np.array(self.valid_actions)
 
@@ -84,7 +79,10 @@ class ActionManager(object):
 
         new_remaining_actions = []
         for action_idx in self._remaining_valid_actions:
-            if b_to_mb(current_storage_consumption + self.action_storage_consumptions[action_idx]) > budget:
+            storage_consumption_with_action = \
+                current_storage_consumption + self.action_storage_consumptions[action_idx]
+
+            if b_to_mb(storage_consumption_with_action) > budget:
                 self.valid_actions[action_idx] = self.FORBIDDEN_ACTION
             else:
                 new_remaining_actions.append(action_idx)
