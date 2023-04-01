@@ -17,7 +17,8 @@ class ConfigurationParser(object):
             "workload_embedder",
             "filter_utilized_columns",
             "logging",
-            "budgets"
+            "budgets",
+            "reenable_indexes"
         ]
 
         self.REQUIRED_CONFIGURATION_OPTIONS_FURTHER = {

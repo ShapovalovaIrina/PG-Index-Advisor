@@ -2,6 +2,7 @@ import logging
 import random
 import os
 import utils
+import gym
 
 from configuration_parser import ConfigurationParser
 from datetime import datetime
@@ -13,9 +14,11 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, sync_env
 from schema.schema import Schema
 from workload_generator import WorkloadGenerator
 from embeddings.workload_embedder import PlanEmbedderLSI
+from gym_env.common import EnvironmentType
+from gym_env.action_manager import MultiColumnIndexActionManager
 
 
-class EnvironmentConfiguration(object):
+class IndexAdvisor(object):
     def __init__(self, configuration_file):
         self._init_time()
 
@@ -110,6 +113,36 @@ class EnvironmentConfiguration(object):
         assert len(self.workload_generator.wl_validation) == 1, \
             "Expected wl_validation to be one element list"
 
+    def make_env(
+            self,
+            env_id,
+            environment_type=EnvironmentType.TRAINING,
+            workloads_in=None
+    ):
+        def _init():
+            action_manager = MultiColumnIndexActionManager(
+                indexable_column_combinations=self.globally_indexable_columns,
+                indexable_column_combinations_flat=self.globally_indexable_columns_flat,
+                action_storage_consumption=self.action_storage_consumptions,
+                max_index_width=self.config["max_index_width"],
+                reenable_indexes=self.config["reenable_indexes"]
+            )
+
+            if self.number_of_actions is None:
+                self.number_of_actions = action_manager.number_of_actions
+
+            # TODO: Observation Manager
+
+            # TODO: Reward Calculator
+
+            # TODO: Workloads for gym
+
+            # TODO: gym.make
+
+        set_random_seed(self.config["random_seed"])
+
+        return _init
+
     def _init_time(self):
         self.start_time = datetime.now()
 
@@ -120,7 +153,7 @@ class EnvironmentConfiguration(object):
     def _create_environment_folder(self):
         if os.path.exists(self.ENVIRONMENT_RESULT_PATH):
             assert os.path.isdir(self.ENVIRONMENT_RESULT_PATH), \
-                f"Folder for environment results must be a folder, not a file: ./{self.ENVIRONMENT_RESULT_PATH}"
+                f"Folder for environment results must be a folder, not a file: {self.ENVIRONMENT_RESULT_PATH}"
         else:
             os.makedirs(self.ENVIRONMENT_RESULT_PATH)
 
@@ -130,7 +163,7 @@ class EnvironmentConfiguration(object):
             os.mkdir(self.environment_folder_path)
         else:
             logging.warning(
-                f"Experiment folder already exists at: ./{self.environment_folder_path} - "
+                f"Experiment folder already exists at: {self.environment_folder_path} - "
                 "terminating here because we don't want to overwrite anything."
             )
 

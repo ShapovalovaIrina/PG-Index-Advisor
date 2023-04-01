@@ -6,7 +6,9 @@ from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 from stable_baselines3 import PPO
 
-from environment_configuration import EnvironmentConfiguration
+from index_advisor import IndexAdvisor
+
+PARALLEL_ENVIRONMENTS = 1
 
 
 if __name__ == "__main__":
@@ -18,7 +20,26 @@ if __name__ == "__main__":
     '''
     Parse configuration file and setup environment.
     '''
-    env_config = EnvironmentConfiguration(CONFIGURATION_FILE)
+    index_advisor = IndexAdvisor(CONFIGURATION_FILE)
 
-    env_config.prepare()
+    index_advisor.prepare()
+
+    VectorizedEnv = SubprocVecEnv if PARALLEL_ENVIRONMENTS > 1 else DummyVecEnv
+
+    # FIXME: just for tests
+    make_env = index_advisor.make_env(0)
+    make_env()
+
+    """
+    training_env = VectorizedEnv(
+        [index_advisor.make_env(env_id) for env_id in range(PARALLEL_ENVIRONMENTS)]
+    )
+    training_env = VecNormalize(
+        training_env,
+        norm_obs=True,
+        norm_reward=True,
+        gamma=index_advisor.config["rl_algorithm"]["gamma"],
+        training=True
+    )
+    """
 

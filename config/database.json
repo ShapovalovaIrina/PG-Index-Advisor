@@ -7,6 +7,7 @@
   "max_index_width": 2,
   "result_path": "experiment_results",
   "filter_utilized_columns": false,
+  "reenable_indexes": true,
   "rl_algorithm": {
     "algorithm": "PPO",
     "gamma": 0.5,
@@ -37,7 +38,7 @@
     "excluded_query_classes": []
   },
   "workload_embedder": {
-    "representation_size": 8
+    "representation_size": 7
   },
   "budgets": {
     "training": false,
