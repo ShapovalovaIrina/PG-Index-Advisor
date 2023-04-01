@@ -16,6 +16,7 @@ from workload_generator import WorkloadGenerator
 from embeddings.workload_embedder import PlanEmbedderLSI
 from gym_env.common import EnvironmentType
 from gym_env.action_manager import MultiColumnIndexActionManager
+from gym_env.reward_manager import CostAndStorageRewardManager
 
 
 class IndexAdvisor(object):
@@ -133,7 +134,7 @@ class IndexAdvisor(object):
 
             # TODO: Observation Manager
 
-            # TODO: Reward Calculator
+            reward_manager = CostAndStorageRewardManager()
 
             # TODO: Workloads for gym
 
