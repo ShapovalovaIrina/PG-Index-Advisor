@@ -145,9 +145,37 @@ class IndexAdvisor(object):
 
             reward_manager = RewardManager()
 
-            # TODO: Workloads for gym
+            if workloads_in is None:
+                workloads = {
+                    EnvironmentType.TRAINING: self.workload_generator.wl_training,
+                    EnvironmentType.TESTING: self.workload_generator.wl_testing[-1],
+                    EnvironmentType.VALIDATION: self.workload_generator.wl_validation[-1]
+                }[environment_type]
+            else:
+                workloads = workloads_in
 
-            # TODO: gym.make
+            # FIXME
+            similar_workloads = False
+            env_config = {
+                "database": self.schema.db_config,
+                "globally_indexable_columns": self.globally_indexable_columns,
+                "workloads": workloads,
+                "action_manager": action_manager,
+                "observation_manager": observation_manager,
+                "reward_manager": reward_manager,
+                "random_seed": self.config["random_seed"] + env_id,
+                "max_steps_per_episode": self.config["max_steps_per_episode"],
+                "env_id": env_id,
+                "similar_workloads": similar_workloads
+            }
+            # TODO: check env
+            env = gym.make(
+                "PGIndexAdvisor-v0",
+                environment_type=environment_type,
+                config=env_config
+            )
+
+            return env
 
         set_random_seed(self.config["random_seed"])
 
