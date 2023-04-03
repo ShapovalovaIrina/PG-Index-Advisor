@@ -16,6 +16,7 @@ from workload_generator import WorkloadGenerator
 from embeddings.workload_embedder import PlanEmbedderLSI
 from gym_env.common import EnvironmentType
 from gym_env.action_manager import MultiColumnIndexActionManager
+from gym_env.observation_manager import MultiColumnObservationManager
 from gym_env.reward_manager import CostAndStorageRewardManager
 
 
@@ -132,7 +133,17 @@ class IndexAdvisor(object):
             if self.number_of_actions is None:
                 self.number_of_actions = action_manager.number_of_actions
 
-            # TODO: Observation Manager
+            observation_manager_config = {
+                "number_of_query_classes": self.workload_generator.number_of_query_classes,
+                "workload_embedder": self.workload_embedder if "workload_embedder" in self.config else None,
+                "workload_size": self.config["workload"]["size"]
+            }
+            observation_manager = MultiColumnObservationManager(
+                number_of_actions=action_manager.number_of_columns,
+                config=observation_manager_config
+            )
+            if self.number_of_features is None:
+                self.number_of_features = observation_manager.number_of_features
 
             reward_manager = CostAndStorageRewardManager()
 
