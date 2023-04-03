@@ -3,11 +3,11 @@
   "description": "Just a test",
   "random_seed": 1000,
   "logging": "-",
-  "max_steps_per_episode": 1000,
+  "max_steps_per_episode": 200,
   "max_index_width": 2,
   "result_path": "experiment_results",
   "filter_utilized_columns": false,
-  "reenable_indexes": true,
+  "reenable_indexes": false,
   "rl_algorithm": {
     "algorithm": "PPO",
     "gamma": 0.5,
