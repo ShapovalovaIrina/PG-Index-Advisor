@@ -78,8 +78,7 @@ class EmbeddingObservationManager(ObservationManager):
 
     def _init_episode(self, episode_state):
         episode_workload = episode_state["workload"]
-        workload_frequencies = self._get_frequencies_from_workload(episode_workload)
-        self.frequencies = np.array(workload_frequencies)
+        self.frequencies = self._get_frequencies_from_workload(episode_workload)
 
         super()._init_episode(episode_state)
 
@@ -102,9 +101,11 @@ class EmbeddingObservationManager(ObservationManager):
     @staticmethod
     def _get_frequencies_from_workload(workload):
         frequencies = []
+
         for query in workload.queries:
             frequencies.append(query.frequency)
-        return frequencies
+
+        return np.array(frequencies)
 
     def _get_embeddings_from_environment_state(self, environment_state):
         def _get_embeddings_array():
