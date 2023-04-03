@@ -15,9 +15,9 @@ from schema.schema import Schema
 from workload_generator import WorkloadGenerator
 from embeddings.workload_embedder import PlanEmbedderLSI
 from gym_env.common import EnvironmentType
-from gym_env.action_manager import MultiColumnIndexActionManager
-from gym_env.observation_manager import MultiColumnObservationManager
-from gym_env.reward_manager import CostAndStorageRewardManager
+from gym_env.action_manager import MultiColumnIndexActionManager as ActionManager
+from gym_env.observation_manager import SingleColumnIndexPlanEmbeddingObservationManagerWithCost as ObservationManager
+from gym_env.reward_manager import CostAndStorageRewardManager as RewardManager
 
 
 class IndexAdvisor(object):
@@ -103,13 +103,12 @@ class IndexAdvisor(object):
             self.config["logging"]
         )
 
-        if "workload_embedder" in self.config:
-            self.workload_embedder = PlanEmbedderLSI(
-                self.workload_generator.query_texts,
-                self.config["workload_embedder"]["representation_size"],
-                self.globally_indexable_columns,
-                self.schema.db_config
-            )
+        self.workload_embedder = PlanEmbedderLSI(
+            self.workload_generator.query_texts,
+            self.config["workload_embedder"]["representation_size"],
+            self.globally_indexable_columns,
+            self.schema.db_config
+        )
 
         # TODO: in original paper there is multi_validation_wl, needs to figure out why this is
         assert len(self.workload_generator.wl_validation) == 1, \
@@ -122,7 +121,7 @@ class IndexAdvisor(object):
             workloads_in=None
     ):
         def _init():
-            action_manager = MultiColumnIndexActionManager(
+            action_manager = ActionManager(
                 indexable_column_combinations=self.globally_indexable_columns,
                 indexable_column_combinations_flat=self.globally_indexable_columns_flat,
                 action_storage_consumption=self.action_storage_consumptions,
@@ -134,18 +133,17 @@ class IndexAdvisor(object):
                 self.number_of_actions = action_manager.number_of_actions
 
             observation_manager_config = {
-                "number_of_query_classes": self.workload_generator.number_of_query_classes,
-                "workload_embedder": self.workload_embedder if "workload_embedder" in self.config else None,
+                "workload_embedder": self.workload_embedder,
                 "workload_size": self.config["workload"]["size"]
             }
-            observation_manager = MultiColumnObservationManager(
+            observation_manager = ObservationManager(
                 number_of_actions=action_manager.number_of_columns,
                 config=observation_manager_config
             )
             if self.number_of_features is None:
                 self.number_of_features = observation_manager.number_of_features
 
-            reward_manager = CostAndStorageRewardManager()
+            reward_manager = RewardManager()
 
             # TODO: Workloads for gym
 

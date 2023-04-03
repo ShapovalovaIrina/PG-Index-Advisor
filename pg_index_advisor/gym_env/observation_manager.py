@@ -52,30 +52,52 @@ class ObservationManager(object):
         return np.array(high)
 
 
-class MultiColumnObservationManager(ObservationManager):
+class EmbeddingObservationManager(ObservationManager):
     def __init__(self, number_of_actions, config):
         ObservationManager.__init__(self, number_of_actions)
 
-        self.number_of_query_classes = config["number_of_query_classes"]
+        self.workload_embedder = config["workload_embedder"]
+        self.representation_size = self.workload_embedder.representation_size
+        self.workload_size = config["workload_size"]
+
+        self.UPDATE_EMBEDDING_PER_OBSERVATION = True
 
         self.number_of_features = (
             self.number_of_actions  # Indicates for each action whether it was taken or not
-            + self.number_of_query_classes  # The frequencies for every query class
+            + (
+                self.representation_size * self.workload_size
+            )  # embedding representation for every query in the workload
+            + self.workload_size  # The frequencies for every query in the workloads
             + 1  # The episode's budget
             + 1  # The current storage consumption
             + 1  # The initial workload cost
             + 1  # The current workload cost
         )
-        self.frequencies = self._init_frequencies()
+
+        self.workload_embedding = None
+
+    def _init_episode(self, episode_state):
+        episode_workload = episode_state["workload"]
+        workload_frequencies = self._get_frequencies_from_workload(episode_workload)
+        self.frequencies = np.array(workload_frequencies)
+
+        super()._init_episode(episode_state)
 
     def init_episode(self, episode_state):
-        episode_workload = episode_state["workload"]
-        super()._init_episode(episode_state)
-        self.frequencies = np.array(self._get_frequencies_from_workload_wide(episode_workload))
+        raise NotImplementedError
 
     def get_observation(self, environment_state):
+        if self.UPDATE_EMBEDDING_PER_OBSERVATION:
+            workload_embedding = self._get_embeddings_from_environment_state(environment_state)
+        else:
+            # In this case the workload embedding is not updated with every step but also not set during init
+            if self.workload_embedding is None:
+                self.workload_embedding = self._get_embeddings_from_environment_state(environment_state)
+
+            workload_embedding = self.workload_embedding
+
         observation = np.array(environment_state["action_status"])
-        # TODO: maybe use extend? frequencies is an array
+        observation = np.append(observation, workload_embedding)
         observation = np.append(observation, self.frequencies)
         observation = np.append(observation, self.episode_budget)
         observation = np.append(observation, environment_state["current_storage_consumption"])
@@ -84,14 +106,51 @@ class MultiColumnObservationManager(ObservationManager):
 
         return observation
 
-    def _get_frequencies_from_workload_wide(self, workload):
-        frequencies = self._init_frequencies()
-
+    @staticmethod
+    def _get_frequencies_from_workload(workload):
+        frequencies = []
         for query in workload.queries:
-            # query numbers stat at 1
-            frequencies[query.nr - 1] = query.frequency
-
+            frequencies.append(query.frequency)
         return frequencies
 
-    def _init_frequencies(self):
-        return [0 for query in range(self.number_of_query_classes)]
+    def _get_embeddings_from_environment_state(self, environment_state):
+        return np.array(self.workload_embedder.get_embeddings(environment_state["plans_per_query"]))
+
+
+class SingleColumnIndexPlanEmbeddingObservationManagerWithCost(EmbeddingObservationManager):
+    def __init__(self, number_of_actions, config):
+        super().__init__(number_of_actions, config)
+
+        self.UPDATE_EMBEDDING_PER_OBSERVATION = True
+
+        # This overwrites EmbeddingObservationManager's features
+        self.number_of_features = (
+            self.number_of_actions  # Indicates for each action whether it was taken or not
+            + (
+                self.representation_size * self.workload_size
+            )  # embedding representation for every query in the workload
+            + self.workload_size  # The costs for every query in the workload
+            + self.workload_size  # The frequencies for every query in the workloads
+            + 1  # The episode's budget
+            + 1  # The current storage consumption
+            + 1  # The initial workload cost
+            + 1  # The current workload cost
+        )
+
+    def init_episode(self, episode_state):
+        super()._init_episode(episode_state)
+
+    def get_observation(self, environment_state):
+        workload_embedding = self._get_embeddings_from_environment_state(environment_state)
+
+        observation = np.array(environment_state["action_status"])
+        observation = np.append(observation, workload_embedding)
+        observation = np.append(observation, environment_state["costs_per_query"])
+        observation = np.append(observation, self.frequencies)
+        observation = np.append(observation, self.episode_budget)
+        observation = np.append(observation, environment_state["current_storage_consumption"])
+        observation = np.append(observation, self.initial_cost)
+        observation = np.append(observation, environment_state["current_cost"])
+
+        return observation
+
