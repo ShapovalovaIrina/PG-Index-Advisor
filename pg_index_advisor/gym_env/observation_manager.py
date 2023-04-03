@@ -87,14 +87,7 @@ class EmbeddingObservationManager(ObservationManager):
         raise NotImplementedError
 
     def get_observation(self, environment_state):
-        if self.UPDATE_EMBEDDING_PER_OBSERVATION:
-            workload_embedding = self._get_embeddings_from_environment_state(environment_state)
-        else:
-            # In this case the workload embedding is not updated with every step but also not set during init
-            if self.workload_embedding is None:
-                self.workload_embedding = self._get_embeddings_from_environment_state(environment_state)
-
-            workload_embedding = self.workload_embedding
+        workload_embedding = self._get_embeddings_from_environment_state(environment_state)
 
         observation = np.array(environment_state["action_status"])
         observation = np.append(observation, workload_embedding)
@@ -114,7 +107,22 @@ class EmbeddingObservationManager(ObservationManager):
         return frequencies
 
     def _get_embeddings_from_environment_state(self, environment_state):
-        return np.array(self.workload_embedder.get_embeddings(environment_state["plans_per_query"]))
+        def _get_embeddings_array():
+            return np.array(self.workload_embedder.get_embeddings(
+                environment_state["plans_per_query"]
+            ))
+
+        if self.UPDATE_EMBEDDING_PER_OBSERVATION:
+            workload_embedding = _get_embeddings_array()
+        else:
+            # In this case the workload embedding is not updated with every step
+            # but also not set during init
+            if self.workload_embedding is None:
+                self.workload_embedding = _get_embeddings_array()
+
+            workload_embedding = self.workload_embedding
+
+        return workload_embedding
 
 
 class SingleColumnIndexPlanEmbeddingObservationManagerWithCost(EmbeddingObservationManager):
