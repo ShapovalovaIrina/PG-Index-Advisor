@@ -186,6 +186,9 @@ class IndexAdvisor(object):
 
         return _init
 
+    def set_model(self, model):
+        self.model = model
+
     def _init_time(self):
         self.start_time = datetime.now()
 
