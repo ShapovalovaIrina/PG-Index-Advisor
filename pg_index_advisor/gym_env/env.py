@@ -83,9 +83,9 @@ class PGIndexAdvisorEnv(gym.Env):
         return initial_observation, info
 
     def step(self, action):
-        # TODO: step asserts
-
         logging.debug(f"Take action: {self._action_idx_to_str(action)}")
+
+        self._step_asserts(action)
 
         self.steps_taken += 1
         old_index_size = 0
@@ -131,6 +131,16 @@ class PGIndexAdvisorEnv(gym.Env):
 
     def valid_action_mask(self):
         return [bool(action) for action in self.valid_actions]
+
+    def _step_asserts(self, action):
+        assert self.action_space.contains(action), f"{action} ({type(action)}) invalid"
+        assert (
+            self.valid_actions[action] == self.action_manager.ALLOWED_ACTION
+        ), f"Agent has chosen invalid action: {action}"
+        assert (
+            PotentialIndex(self.globally_indexable_columns[action]) not in self.current_indexes
+        ), f"{PotentialIndex(self.globally_indexable_columns[action])} already in self.current_indexes"
+
 
     def _get_initial_observation(self):
         self.current_indexes = set()
