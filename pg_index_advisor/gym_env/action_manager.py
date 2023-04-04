@@ -6,6 +6,9 @@ from gym import spaces
 
 from index_selection_evaluation.selection.utils import b_to_mb
 
+FORBIDDEN_ACTION = 0
+ALLOWED_ACTION = 1
+
 
 class ActionManager(object):
     def __init__(self, max_index_width, action_storage_consumptions):
@@ -22,8 +25,8 @@ class ActionManager(object):
         self.MAX_INDEX_WIDTH = max_index_width
         self.action_storage_consumptions = action_storage_consumptions
 
-        self.FORBIDDEN_ACTION = -np.inf
-        self.ALLOWED_ACTION = 0
+        self.FORBIDDEN_ACTION = FORBIDDEN_ACTION
+        self.ALLOWED_ACTION = ALLOWED_ACTION
 
     def get_action_space(self):
         return spaces.Discrete(self.number_of_actions)

@@ -100,6 +100,6 @@ class IndexConstraintFilter(object):
                 output_indexes.append(index)
 
         logging.warning(f"Reduced indexes from {len(indexes)} to {len(output_indexes)} " +
-                        f"by skipping prmary keys.")
+                        f"by skipping primary keys.")
 
         return output_indexes

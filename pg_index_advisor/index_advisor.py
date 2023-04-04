@@ -6,6 +6,8 @@ import gym
 
 from configuration_parser import ConfigurationParser
 from datetime import datetime
+from sb3_contrib.common.wrappers import ActionMasker
+from typing import List
 
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.utils import set_random_seed
@@ -18,6 +20,11 @@ from gym_env.common import EnvironmentType
 from gym_env.action_manager import MultiColumnIndexActionManager as ActionManager
 from gym_env.observation_manager import SingleColumnIndexPlanEmbeddingObservationManagerWithCost as ObservationManager
 from gym_env.reward_manager import CostAndStorageRewardManager as RewardManager
+from gym_env.env import PGIndexAdvisorEnv
+
+
+def mask_fn(env: PGIndexAdvisorEnv) -> List[bool]:
+    return env.valid_action_mask()
 
 
 class IndexAdvisor(object):
@@ -154,11 +161,9 @@ class IndexAdvisor(object):
             else:
                 workloads = workloads_in
 
-            # FIXME
-            similar_workloads = False
             env_config = {
                 "database": self.schema.db_config,
-                "globally_indexable_columns": self.globally_indexable_columns,
+                "globally_indexable_columns": self.globally_indexable_columns_flat,
                 "workloads": workloads,
                 "action_manager": action_manager,
                 "observation_manager": observation_manager,
@@ -166,14 +171,14 @@ class IndexAdvisor(object):
                 "random_seed": self.config["random_seed"] + env_id,
                 "max_steps_per_episode": self.config["max_steps_per_episode"],
                 "env_id": env_id,
-                "similar_workloads": similar_workloads
+                "similar_workloads": self.config["workload"]["similar_workloads"]
             }
-            # TODO: check env
             env = gym.make(
                 "PGIndexAdvisor-v0",
                 environment_type=environment_type,
                 config=env_config
             )
+            env = ActionMasker(env, mask_fn)
 
             return env
 

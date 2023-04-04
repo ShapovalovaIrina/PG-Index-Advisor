@@ -5,6 +5,7 @@ import importlib
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 from stable_baselines3 import PPO
+from sb3_contrib.ppo_mask import MaskablePPO
 
 from index_advisor import IndexAdvisor
 
@@ -26,11 +27,6 @@ if __name__ == "__main__":
 
     VectorizedEnv = SubprocVecEnv if PARALLEL_ENVIRONMENTS > 1 else DummyVecEnv
 
-    # FIXME: just for tests
-    make_env = index_advisor.make_env(0)
-    make_env()
-
-    """
     training_env = VectorizedEnv(
         [index_advisor.make_env(env_id) for env_id in range(PARALLEL_ENVIRONMENTS)]
     )
@@ -41,5 +37,4 @@ if __name__ == "__main__":
         gamma=index_advisor.config["rl_algorithm"]["gamma"],
         training=True
     )
-    """
 

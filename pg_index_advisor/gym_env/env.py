@@ -1,9 +1,10 @@
 import collections
 import logging
 import copy
-import random
-
 import gym
+import numpy as np
+
+from typing import List
 
 from .common import EnvironmentType
 from .action_manager import MultiColumnIndexActionManager as ActionManager
@@ -13,19 +14,21 @@ from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector a
 from index_selection_evaluation.selection.cost_evaluation import CostEvaluation
 from index_selection_evaluation.selection.index import Index as PotentialIndex
 from index_selection_evaluation.selection.utils import b_to_mb
+from index_selection_evaluation.selection.workload import Workload
 
 
 class PGIndexAdvisorEnv(gym.Env):
     action_manager: ActionManager
     observation_manager: ObservationManager
     reward_manager: RewardManager
+    workloads: List[Workload]
+    current_workload: Workload
 
     def __init__(self, environment_type=EnvironmentType.TRAINING, config=None):
-        # TODO: а почему именно так....
+        logging.debug("__init__() was called")
+
         super(PGIndexAdvisorEnv, self).__init__()
 
-        self.rnd = random.Random()
-        self.rnd.seed(config["random_seed"])
         self.env_id = config["env_id"]
         self.environment_type = environment_type
         self.config = config
@@ -50,6 +53,7 @@ class PGIndexAdvisorEnv(gym.Env):
         self.current_costs = 0
         self.similar_workloads = config["similar_workloads"]
         self.max_steps_per_episode = config["max_steps_per_episode"]
+        self.valid_actions = np.array([])
 
         self.action_manager = config["action_manager"]
         self.action_space = self.action_manager.get_action_space()
@@ -59,21 +63,29 @@ class PGIndexAdvisorEnv(gym.Env):
 
         self.reward_manager = config["reward_manager"]
 
-        self._init_env_state()
+        self._get_initial_observation()
 
         if self.environment_type != environment_type.TRAINING:
             self.episode_performance = collections.deque(maxlen=len(config["workloads"]))
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
+        logging.debug("reset() was called")
+
+        # We need the following line to seed self.np_random
+        super().reset(seed=seed)
+
         self.number_of_resets += 1
         self.total_number_of_steps += self.steps_taken
 
-        initial_observation = self._init_env_state()
+        initial_observation = self._get_initial_observation()
+        info = self._get_info()
 
-        return initial_observation
+        return initial_observation, info
 
     def step(self, action):
         # TODO: step asserts
+
+        logging.debug(f"Take action: {self._action_idx_to_str(action)}")
 
         self.steps_taken += 1
         old_index_size = 0
@@ -90,16 +102,15 @@ class PGIndexAdvisorEnv(gym.Env):
 
             self.current_indexes.remove(parent_index)
 
-            assert old_index_size > 0, "Parent index size must have been found if not single column index."
+            assert old_index_size > 0, \
+                "Parent index size must have been found if not single column index."
 
-        environment_state = self._update_env_state(
-            init=False,
+        environment_state = self._get_env_state(
             new_index=new_index,
             old_index_size=old_index_size
         )
         current_observation = self.observation_manager.get_observation(environment_state)
 
-        # FIXME
         self.valid_actions, is_valid_action_left = \
             self.action_manager.update_valid_actions(
                 action,
@@ -114,9 +125,14 @@ class PGIndexAdvisorEnv(gym.Env):
             # TODO: report episode performance
             self.current_workload_idx += 1
 
-        return current_observation, reward, episode_done, {"action_mask": self.valid_actions}
+        info = self._get_info()
 
-    def _init_env_state(self):
+        return current_observation, reward, episode_done, False, info
+
+    def valid_action_mask(self):
+        return [bool(action) for action in self.valid_actions]
+
+    def _get_initial_observation(self):
         self.current_indexes = set()
         self.steps_taken = 0
         self.current_storage_consumption = 0
@@ -131,7 +147,7 @@ class PGIndexAdvisorEnv(gym.Env):
                 # 200 is an arbitrary value
                 self.current_workload = self.workloads.pop(0 + self.env_id * 200)
             else:
-                self.current_workload = self.rnd.choice(self.workloads)
+                self.current_workload = self.np_random.choice(self.workloads)
         else:
             self.current_workload = self.workloads[self.current_workload_idx % len(self.workloads)]
 
@@ -142,7 +158,7 @@ class PGIndexAdvisorEnv(gym.Env):
             self.current_workload,
             self.current_budget
         )
-        environment_state = self._update_env_state(init=True)
+        environment_state = self._get_init_env_state()
 
         episode_state = {
             "budget": self.current_budget,
@@ -155,11 +171,13 @@ class PGIndexAdvisorEnv(gym.Env):
 
         return initial_observation
 
-    def _update_env_state(
-            self, 
-            init, 
-            new_index: PotentialIndex = None, 
-            old_index_size=None
+    def _action_idx_to_str(self, action_idx):
+        return self.globally_indexable_columns[action_idx]
+
+    def _get_env_state(
+            self,
+            new_index: PotentialIndex,
+            old_index_size: int
     ):
         total_costs, plans_per_query, costs_per_query = \
             self.cost_evaluation.calculate_cost_and_plans(
@@ -168,38 +186,51 @@ class PGIndexAdvisorEnv(gym.Env):
                 store_size=True
             )
 
-        if not init:
-            self.previous_cost = self.current_costs
-            self.previous_storage_consumption = self.current_storage_consumption
+        self.previous_cost = self.current_costs
+        self.previous_storage_consumption = self.current_storage_consumption
 
         self.current_costs = total_costs
+        self.current_storage_consumption += new_index.estimated_size
+        self.current_storage_consumption -= old_index_size
 
-        if init:
-            self.initial_costs = total_costs
+        # This assumes that old_index_size is not None if new_index is not None
+        assert new_index.estimated_size >= old_index_size
 
-        new_index_size = None
+        # TODO: минимальный размер нового индекса равен 1?
+        new_index_size = max(new_index.estimated_size - old_index_size, 1)
 
-        if new_index is not None:
-            self.current_storage_consumption += new_index.estimated_size
-            self.current_storage_consumption -= old_index_size
-
-            # This assumes that old_index_size is not None if new_index is not None
-            assert new_index.estimated_size >= old_index_size
-
-            new_index_size = new_index.estimated_size - old_index_size
-            # TODO: ???
-            if new_index_size == 0:
-                new_index_size = 1
-
-            # TODO: ???
-            if self.current_budget:
-                assert b_to_mb(self.current_storage_consumption) <= self.current_budget, (
-                    "Storage consumption exceeds budget: "
-                    f"{b_to_mb(self.current_storage_consumption)} "
-                    f" > {self.current_budget}"
-                )
+        if self.current_budget:
+            assert b_to_mb(self.current_storage_consumption) <= self.current_budget, (
+                "Storage consumption exceeds budget: "
+                f"{b_to_mb(self.current_storage_consumption)} "
+                f" > {self.current_budget}"
+            )
                 
-        environment_state = {
+        environment_state = self._get_env_state_dict(
+            plans_per_query,
+            costs_per_query,
+            new_index_size
+        )
+
+        return environment_state
+
+    def _get_init_env_state(self):
+        total_costs, plans_per_query, costs_per_query = \
+            self.cost_evaluation.calculate_cost_and_plans(
+                self.current_workload,
+                self.current_indexes,
+                store_size=True
+            )
+
+        self.current_costs = total_costs
+        self.initial_costs = total_costs
+
+        environment_state = self._get_env_state_dict(plans_per_query, costs_per_query)
+
+        return environment_state
+
+    def _get_env_state_dict(self, plans_per_query, costs_per_query, new_index_size=None):
+        return {
             "action_status": self.action_manager.current_actions_status,
             "current_storage_consumption": self.current_storage_consumption,
             "current_cost": self.current_costs,
@@ -209,8 +240,9 @@ class PGIndexAdvisorEnv(gym.Env):
             "plans_per_query": plans_per_query,
             "costs_per_query": costs_per_query
         }
-        
-        return environment_state
+
+    def _get_info(self):
+        return {"action_mask": self.valid_actions}
 
     def render(self, mode="human"):
         logging.warning("render() was called")

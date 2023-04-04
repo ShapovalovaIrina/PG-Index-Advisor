@@ -35,7 +35,8 @@
     "validation_testing": {
       "number_of_workloads": 5
     },
-    "excluded_query_classes": []
+    "excluded_query_classes": [],
+    "similar_workloads": false
   },
   "workload_embedder": {
     "representation_size": 7
