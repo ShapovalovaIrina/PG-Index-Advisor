@@ -25,7 +25,9 @@ class ConfigurationParser(object):
             "rl_algorithm": [
                 "algorithm",
                 "gamma",
-                "policy"
+                "policy",
+                "model_architecture",
+                "args"
             ],
             "database": [
                 "database",

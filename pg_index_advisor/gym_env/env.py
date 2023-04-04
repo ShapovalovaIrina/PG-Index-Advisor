@@ -2,6 +2,7 @@ import collections
 import logging
 import copy
 import gym
+import random
 import numpy as np
 
 from typing import List
@@ -29,6 +30,8 @@ class PGIndexAdvisorEnv(gym.Env):
 
         super(PGIndexAdvisorEnv, self).__init__()
 
+        self.rnd = random.Random()
+        self.rnd.seed(config["random_seed"])
         self.env_id = config["env_id"]
         self.environment_type = environment_type
         self.config = config
@@ -70,9 +73,6 @@ class PGIndexAdvisorEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         logging.debug("reset() was called")
-
-        # We need the following line to seed self.np_random
-        super().reset(seed=seed)
 
         self.number_of_resets += 1
         self.total_number_of_steps += self.steps_taken
@@ -157,7 +157,7 @@ class PGIndexAdvisorEnv(gym.Env):
                 # 200 is an arbitrary value
                 self.current_workload = self.workloads.pop(0 + self.env_id * 200)
             else:
-                self.current_workload = self.np_random.choice(self.workloads)
+                self.current_workload = self.rnd.choice(self.workloads)
         else:
             self.current_workload = self.workloads[self.current_workload_idx % len(self.workloads)]
 

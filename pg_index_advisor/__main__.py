@@ -1,6 +1,7 @@
 import logging
 import sys
 import importlib
+import copy
 
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
@@ -37,4 +38,23 @@ if __name__ == "__main__":
         gamma=index_advisor.config["rl_algorithm"]["gamma"],
         training=True
     )
+
+    # TODO: save env state to file (pickle)
+
+    # This is necessary because SB modifies the passed dict.
+    model_architecture = copy.copy(index_advisor.config["rl_algorithm"]["model_architecture"])
+
+    model = MaskablePPO(
+        policy=index_advisor.config["rl_algorithm"]["policy"],
+        env=training_env,
+        verbose=2,
+        seed=index_advisor.config["random_seed"],
+        gamma=index_advisor.config["rl_algorithm"]["gamma"],
+        tensorboard_log="tensor_log",
+        policy_kwargs=model_architecture,
+        **index_advisor.config["rl_algorithm"]["args"]
+    )
+    logging.info(f"Creating model with NN architecture: {model_architecture}")
+
+    index_advisor.set_model(model)
 

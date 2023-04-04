@@ -13,12 +13,13 @@
     "gamma": 0.5,
     "policy": "MlpPolicy",
     "model_architecture": {
-      "net_arch": [
-        {
-          "vf": [256,256],
-          "pi": [256,256]
-        }
-      ]
+      "net_arch": {
+        "vf": [256,256],
+        "pi": [256,256]
+      }
+    },
+    "args": {
+      "n_steps": 64
     }
   },
   "database": {
