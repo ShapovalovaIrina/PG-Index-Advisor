@@ -31,7 +31,8 @@ class ObservationManager(object):
         observation_space = spaces.Box(
             low=self._create_low_boundaries(),
             high=self._create_high_boundaries(),
-            shape=self._create_shape()
+            shape=self._create_shape(),
+            dtype=np.float64
         )
 
         logging.info(f"Creating ObservationSpace with {self.number_of_features} features.")

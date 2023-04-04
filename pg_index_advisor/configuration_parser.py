@@ -39,7 +39,8 @@ class ConfigurationParser(object):
                 "varying_frequencies",
                 "training_instances",
                 "validation_testing",
-                "excluded_query_classes"
+                "excluded_query_classes",
+                "similar_workloads"
             ],
             "workload_embedder": [
                 "representation_size"
