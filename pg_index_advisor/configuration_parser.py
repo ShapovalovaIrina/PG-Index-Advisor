@@ -18,7 +18,9 @@ class ConfigurationParser(object):
             "filter_utilized_columns",
             "logging",
             "budgets",
-            "reenable_indexes"
+            "reenable_indexes",
+            "validation_frequency",
+            "timesteps"
         ]
 
         self.REQUIRED_CONFIGURATION_OPTIONS_FURTHER = {

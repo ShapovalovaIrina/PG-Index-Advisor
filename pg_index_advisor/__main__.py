@@ -1,14 +1,12 @@
 import logging
 import sys
-import importlib
 import copy
 
-from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
-from stable_baselines3 import PPO
 from sb3_contrib.ppo_mask import MaskablePPO
 
 from index_advisor import IndexAdvisor
+from gym_env.common import EnvironmentType
 
 PARALLEL_ENVIRONMENTS = 1
 
@@ -57,4 +55,26 @@ if __name__ == "__main__":
     logging.info(f"Creating model with NN architecture: {model_architecture}")
 
     index_advisor.set_model(model)
+
+    # Callbacks
+    test_callback = index_advisor.get_callback(
+        EnvironmentType.TESTING
+    )
+    validation_callback = index_advisor.get_callback(
+        EnvironmentType.VALIDATION,
+        best_model_save_path=index_advisor.folder_path
+    )
+
+    callbacks = [validation_callback, test_callback]
+
+    index_advisor.start_learning_time()
+
+    model.learn(
+        total_timesteps=index_advisor.config["timesteps"],
+        callback=callbacks,
+        tb_log_name=index_advisor.id,
+        progress_bar=True
+    )
+
+    index_advisor.finish_learning_time()
 
