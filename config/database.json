@@ -8,8 +8,8 @@
   "result_path": "experiment_results",
   "filter_utilized_columns": false,
   "reenable_indexes": false,
-  "validation_frequency": 1000,
-  "timesteps": 20000,
+  "validation_frequency": 10,
+  "timesteps": 100,
   "rl_algorithm": {
     "algorithm": "PPO",
     "gamma": 0.5,

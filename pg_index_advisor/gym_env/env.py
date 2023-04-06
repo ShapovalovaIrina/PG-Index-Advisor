@@ -1,4 +1,5 @@
 import collections
+import json
 import logging
 import copy
 import gym
@@ -72,7 +73,7 @@ class PGIndexAdvisorEnv(gym.Env):
             self.episode_performance = collections.deque(maxlen=len(config["workloads"]))
 
     def reset(self, seed=None, options=None):
-        logging.info("reset() was called")
+        logging.debug("reset() was called")
 
         self.number_of_resets += 1
         self.total_number_of_steps += self.steps_taken
@@ -129,16 +130,6 @@ class PGIndexAdvisorEnv(gym.Env):
         return current_observation, reward, episode_done, info
 
     def valid_action_mask(self):
-        # logging.debug(f"Get valid action mask")
-        # count = 0
-        #
-        # for idx, a in enumerate(self.action_manager.valid_actions):
-        #     if a == 1:
-        #         logging.debug(f"{idx}: {self._action_idx_to_str(idx)}")
-        #         count += 1
-        #
-        # logging.debug(f"Valid actions in mask: {count}")
-
         return [bool(action) for action in self.action_manager.valid_actions]
 
     def _step_asserts(self, action):
@@ -149,12 +140,7 @@ class PGIndexAdvisorEnv(gym.Env):
         Agent has chosen invalid action: {action} ({self._action_idx_to_str(action)}.
         
         State:
-        
-        1. Valid actions:
-        {self.valid_actions}
-        
-        2. Current indexes:
-        {self.current_indexes}
+        {json.dumps(self._get_env_state_for_debug(), indent=2)}
         )"""
         assert (
             PotentialIndex(self.globally_indexable_columns[action]) not in self.current_indexes
@@ -271,6 +257,12 @@ class PGIndexAdvisorEnv(gym.Env):
 
     def _get_info(self):
         return {"action_mask": self.valid_actions}
+
+    def _get_env_state_for_debug(self):
+        return {
+            'Valid actions': self.valid_actions,
+            'Current indexes': self.current_indexes
+        }
 
     def render(self, mode="human"):
         logging.warning("render() was called")

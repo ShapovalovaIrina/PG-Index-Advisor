@@ -12,7 +12,7 @@ PARALLEL_ENVIRONMENTS = 1
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
 
     assert len(sys.argv) == 2, "System configuration file must be provided: main.py path_fo_file.json"
     CONFIGURATION_FILE = sys.argv[1]
