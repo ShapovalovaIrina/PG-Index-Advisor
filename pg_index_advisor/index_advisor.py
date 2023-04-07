@@ -1,17 +1,26 @@
+import gzip
+import json
 import logging
+import pickle
 import random
 import os
+import subprocess
+
 import utils
 import gym
+import numpy as np
 
 from configuration_parser import ConfigurationParser
-from datetime import datetime
-from sb3_contrib.common.wrappers import ActionMasker
-from typing import List
+from datetime import datetime, timedelta
+from typing import List, Optional
 
-from stable_baselines3.common.utils import set_random_seed
 from sb3_contrib.common.maskable.callbacks import MaskableEvalCallback
+from sb3_contrib.ppo_mask import MaskablePPO
+from sb3_contrib.common.maskable.evaluation import evaluate_policy
+from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import sync_envs_normalization
+from stable_baselines3.common.utils import set_random_seed
 
 from schema.schema import Schema
 from workload_generator import WorkloadGenerator
@@ -28,9 +37,9 @@ def mask_fn(env: PGIndexAdvisorEnv) -> List[bool]:
 
 
 class IndexAdvisor(object):
-    def __init__(self, configuration_file):
-        self._init_time()
+    model: Optional[MaskablePPO]
 
+    def __init__(self, configuration_file):
         cp = ConfigurationParser(configuration_file)
         self.config = cp.config
 
@@ -58,6 +67,8 @@ class IndexAdvisor(object):
 
         self.result_path = self.config["result_path"]
         self._create_environment_folder()
+
+        self._init_time()
 
     def prepare(self):
         """
@@ -257,3 +268,200 @@ class IndexAdvisor(object):
         )
 
         return callback
+
+    def finish_learning(self, training_env: VecNormalize, parallel_environments=1):
+        self.model.save(f"{self.folder_path}/final_model")
+        training_env.save(f"{self.folder_path}/training_env_vec_normalize.pkl")
+
+        self.evaluated_episodes = 0
+        for number_of_resets in training_env.get_attr("number_of_resets"):
+            self.evaluated_episodes += number_of_resets
+
+        self.total_steps_taken = 0
+        for total_number_of_steps in training_env.get_attr("total_number_of_steps"):
+            self.total_steps_taken += total_number_of_steps
+
+        self.cache_hits = 0
+        self.cost_requests = 0
+        self.costing_time = timedelta(0)
+        for cache_info in training_env.env_method("get_cost_eval_cache_info"):
+            self.cache_hits += cache_info[1]
+            self.cost_requests += cache_info[0]
+            self.costing_time += cache_info[2]
+        self.costing_time /= parallel_environments
+
+        self.cache_hit_ratio = self.cache_hits / self.cost_requests * 100
+
+        if self.config["pickle_cost_estimation_caches"]:
+            caches = []
+            for cache in training_env.env_method("get_cost_eval_cache"):
+                caches.append(cache)
+            combined_caches = {}
+            for cache in caches:
+                combined_caches = {**combined_caches, **cache}
+            with gzip.open(f"{self.folder_path}/caches.pickle.gzip", "wb") as handle:
+                pickle.dump(combined_caches, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def write_report(self):
+        self.end_time = datetime.now()
+
+        self.model.training = False
+        self.model.env.norm_reward = False
+        self.model.env.training = False
+
+        # FM - Final Model
+        test_fm = self._get_model_performance(self.model, EnvironmentType.TESTING)
+        vali_fm = self._get_model_performance(self.model, EnvironmentType.VALIDATION)
+
+        best_reward_model = MaskablePPO.load(f"{self.folder_path}/best_model.zip")
+        best_reward_model.training = False
+
+        # BM - Best Model
+        test_bm = self._get_model_performance(best_reward_model, EnvironmentType.TESTING)
+        vali_bm = self._get_model_performance(best_reward_model, EnvironmentType.VALIDATION)
+
+        # TODO: multi validation
+
+        models = {
+            'fm': {
+                'test': test_fm,
+                'vali': vali_fm
+            },
+            'bm': {
+                'test': test_bm,
+                'vali': vali_bm
+            }
+        }
+
+        self._write_report(models)
+
+        logging.critical(
+            (
+                f"Finished training of ID {self.id}. Report can be found at "
+                f"./{self.folder_path}/report_ID_{self.id}.txt"
+            )
+        )
+
+    def _get_model_performance(self, model, environment_type: EnvironmentType):
+        wl_list = {
+            EnvironmentType.TESTING: self.workload_generator.wl_testing,
+            EnvironmentType.VALIDATION: self.workload_generator.wl_validation
+        }[environment_type]
+
+        model_performances = []
+        for wl in wl_list:
+            env = DummyVecEnv([self.make_env(0, environment_type, wl)])
+            env = VecNormalize(
+                env,
+                norm_obs=True,
+                norm_reward=False,
+                gamma=self.config["rl_algorithm"]["gamma"],
+                training=False,
+            )
+
+            if model != self.model:
+                model.set_env(self.model.env)
+
+            model_performance = self._evaluate_model(model, env, len(wl))
+            model_performances.append(model_performance)
+
+        return model_performances
+
+    @staticmethod
+    def _evaluate_model(model, evaluation_env, n_eval_episodes):
+        training_env = model.get_vec_normalize_env()
+        sync_envs_normalization(training_env, evaluation_env)
+
+        evaluate_policy(model, evaluation_env, n_eval_episodes)
+
+        episode_performances = evaluation_env.get_attr("episode_performances")[0]
+        perfs = []
+        for perf in episode_performances:
+            perfs.append(round(perf["achieved_cost"], 2))
+
+        mean_performance = np.mean(perfs)
+        print(f"Mean performance: {mean_performance:.2f} ({perfs})")
+
+        return episode_performances, mean_performance, perfs
+
+    def _write_report(self, models):
+        probabilities = len(self.config["workload"]["validation_testing"]["unknown_query_probabilities"])
+
+        def final_avg(values):
+            val = 0
+            for res in values:
+                val += res[1]
+            return val / probabilities
+
+        with open(f"{self.folder_path}/report_ID_{self.id}.txt", "w") as f:
+            f.write(f"##### Report for Experiment with ID: {self.id} #####\n")
+            f.write(f"Description: {self.config['description']}\n")
+            f.write("\n")
+
+            f.write(f"Start:                         {self.start_time}\n")
+            f.write(f"End:                           {self.end_time}\n")
+            f.write(f"Duration:                      {self.end_time - self.start_time}\n")
+            f.write("\n")
+            f.write(f"Start Training:                {self.training_start_time}\n")
+            f.write(f"End Training:                  {self.training_end_time}\n")
+            f.write(f"Duration Training:             {self.training_end_time - self.training_start_time}\n")
+            f.write(f"Git Hash:                      {subprocess.check_output(['git', 'rev-parse', 'HEAD'])}\n")
+            f.write(f"Number of features:            {self.number_of_features}\n")
+            f.write(f"Number of actions:             {self.number_of_actions}\n")
+            f.write("\n")
+
+            # TODO: unknown queries
+
+            f.write("Overall Test:\n")
+
+            f.write(
+                "        Final model:           " 
+                f"{final_avg(models['fm']['test']):.2f}\n"
+            )
+            f.write(
+                "        Best model:            " 
+                f"{final_avg(models['bm']['test']):.2f}\n"
+            )
+            # TODO: multi validation wl
+            f.write("\n")
+
+            f.write("Overall Validation:\n")
+            f.write(
+                "        Final model:           " 
+                f"{final_avg(models['fm']['vali']):.2f}\n"
+            )
+            f.write(
+                "        Best model:            " 
+                f"{final_avg(models['bm']['vali']):.2f}\n"
+            )
+            # TODO: multi validation
+            f.write("\n")
+            f.write("\n")
+
+            f.write(f"Evaluated episodes:            {self.evaluated_episodes}\n")
+            f.write(f"Total steps taken:             {self.total_steps_taken}\n")
+            f.write(
+                (
+                    f"CostEval cache hit ratio:      "
+                    f"{self.cache_hit_ratio:.2f} ({self.cache_hits} of {self.cost_requests})\n"
+                )
+            )
+            training_time = self.training_end_time - self.training_start_time
+            f.write(
+                f"Cost eval time (% of total):   {self.costing_time} ({self.costing_time / training_time * 100:.2f}%)\n"
+            )
+
+            f.write("\n\n")
+            f.write("Used configuration:\n")
+            json.dump(self.config, f)
+            f.write("\n\n")
+            f.write("Evaluated test workloads:\n")
+            for evaluated_workload in self.evaluated_workloads_strs[: (len(self.evaluated_workloads_strs) // 2)]:
+                f.write(f"{evaluated_workload}\n")
+            f.write("Evaluated validation workloads:\n")
+            # fmt: off
+            for evaluated_workload in self.evaluated_workloads_strs[(len(self.evaluated_workloads_strs) // 2) :]:  # noqa: E203, E501
+                f.write(f"{evaluated_workload}\n")
+            # fmt: on
+            f.write("\n\n")
+

@@ -76,4 +76,5 @@ if __name__ == "__main__":
     )
 
     index_advisor.finish_learning_time()
-
+    index_advisor.finish_learning(training_env)
+    index_advisor.write_report()
