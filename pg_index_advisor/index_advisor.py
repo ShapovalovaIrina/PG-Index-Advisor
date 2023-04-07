@@ -9,9 +9,9 @@ from datetime import datetime
 from sb3_contrib.common.wrappers import ActionMasker
 from typing import List
 
-from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, sync_envs_normalization
+from sb3_contrib.common.maskable.callbacks import MaskableEvalCallback
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from schema.schema import Schema
 from workload_generator import WorkloadGenerator
@@ -51,7 +51,12 @@ class IndexAdvisor(object):
         self.globally_indexable_columns_flat = []
         self.action_storage_consumptions = []
 
-        self.ENVIRONMENT_RESULT_PATH = self.config["result_path"]
+        self.start_time = None
+        self.end_time = None
+        self.training_start_time = None
+        self.training_end_time = None
+
+        self.result_path = self.config["result_path"]
         self._create_environment_folder()
 
     def prepare(self):
@@ -92,6 +97,7 @@ class IndexAdvisor(object):
             self.globally_indexable_columns,
             self.config["max_index_width"]
         )
+        # TODO: filter globally_indexable_columns by existing indexes
 
         self.single_column_flat_set = set(map(lambda x: x[0], self.globally_indexable_columns[0]))
 
@@ -192,24 +198,26 @@ class IndexAdvisor(object):
     def _init_time(self):
         self.start_time = datetime.now()
 
-        self.end_time = None
-        self.training_start_time = None
-        self.training_end_time = None
+    def start_learning_time(self):
+        self.training_start_time = datetime.now()
+
+    def finish_learning_time(self):
+        self.training_end_time = datetime.now()
 
     def _create_environment_folder(self):
-        if os.path.exists(self.ENVIRONMENT_RESULT_PATH):
-            assert os.path.isdir(self.ENVIRONMENT_RESULT_PATH), \
-                f"Folder for environment results must be a folder, not a file: {self.ENVIRONMENT_RESULT_PATH}"
+        if os.path.exists(self.result_path):
+            assert os.path.isdir(self.result_path), \
+                f"Folder for environment results must be a folder, not a file: {self.result_path}"
         else:
-            os.makedirs(self.ENVIRONMENT_RESULT_PATH)
+            os.makedirs(self.result_path)
 
-        self.environment_folder_path = f"{self.ENVIRONMENT_RESULT_PATH}/ID_{self.id}"
+        self.folder_path = f"{self.result_path}/ID_{self.id}"
 
-        if not os.path.exists(self.environment_folder_path):    
-            os.mkdir(self.environment_folder_path)
+        if not os.path.exists(self.folder_path):    
+            os.mkdir(self.folder_path)
         else:
             logging.warning(
-                f"Experiment folder already exists at: {self.environment_folder_path} - "
+                f"Experiment folder already exists at: {self.folder_path} - "
                 "terminating here because we don't want to overwrite anything."
             )
 
@@ -223,3 +231,29 @@ class IndexAdvisor(object):
         for workload_list in self.workload_generator.wl_validation:
             for workload in workload_list:
                 workload.budget = self.rnd.choice(self.config["budgets"]["validation_and_testing"])
+
+    def get_callback(
+            self,
+            env_type: EnvironmentType,
+            best_model_save_path=None,
+            parallel_environments=1
+    ):
+        callback_env = VecNormalize(
+            DummyVecEnv([self.make_env(0, env_type)]),
+            norm_obs=True,
+            norm_reward=False,
+            gamma=self.config["rl_algorithm"]["gamma"],
+            training=False
+        )
+        callback = MaskableEvalCallback(
+            eval_env=callback_env,
+            n_eval_episodes=self.config["workload"]["validation_testing"]["number_of_workloads"],
+            eval_freq=round(
+                self.config["validation_frequency"] / parallel_environments
+            ),
+            verbose=1,
+            deterministic=True,
+            best_model_save_path=best_model_save_path
+        )
+
+        return callback

@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import copy
 import logging
@@ -5,6 +7,7 @@ import logging
 from gym import spaces
 
 from index_selection_evaluation.selection.utils import b_to_mb
+from pg_index_advisor.utils import add_if_not_exists, remove_if_exists
 
 FORBIDDEN_ACTION = 0
 ALLOWED_ACTION = 1
@@ -12,7 +15,7 @@ ALLOWED_ACTION = 1
 
 class ActionManager(object):
     def __init__(self, max_index_width, action_storage_consumptions):
-        self.valid_actions = None
+        self.valid_actions = []
         # List of valid actions (combinations) IDs
         self._remaining_valid_actions = []
         self.number_of_actions = None
@@ -40,6 +43,8 @@ class ActionManager(object):
         self.current_actions_status = [0 for action in range(self.number_of_columns)]
 
         self.valid_actions = [self.FORBIDDEN_ACTION for actions in range(self.number_of_actions)]
+        self._remaining_valid_actions = []
+        self.current_combinations = set()
 
         self._valid_actions_based_on_workload(workload)
         self._valid_actions_based_on_budget(budget, current_storage_consumption=0)
@@ -47,7 +52,13 @@ class ActionManager(object):
         return np.array(self.valid_actions)
 
     def update_valid_actions(self, last_action, budget, current_storage_consumption):
-        assert self.indexable_column_combinations_flat[last_action] not in self.current_combinations
+        assert self.indexable_column_combinations_flat[last_action] not in self.current_combinations, \
+            f"""
+            Expected action {self.indexable_column_combinations_flat[last_action]} to \
+            be not in current combinations.
+            State:
+            {json.dumps(self._get_state_for_logging(), indent=2)}
+            """
 
         actions_index_width = len(self.indexable_column_combinations_flat[last_action])
         if actions_index_width == 1:
@@ -66,6 +77,7 @@ class ActionManager(object):
 
         self.current_combinations.add(self.indexable_column_combinations_flat[last_action])
 
+        self._log_action(last_action, "forbid", "update_valid_actions")
         self.valid_actions[last_action] = self.FORBIDDEN_ACTION
         self._remaining_valid_actions.remove(last_action)
 
@@ -86,6 +98,7 @@ class ActionManager(object):
                 current_storage_consumption + self.action_storage_consumptions[action_idx]
 
             if b_to_mb(storage_consumption_with_action) > budget:
+                self._log_action(action_idx, "forbid", "_valid_actions_based_on_budget")
                 self.valid_actions[action_idx] = self.FORBIDDEN_ACTION
             else:
                 new_remaining_actions.append(action_idx)
@@ -97,6 +110,18 @@ class ActionManager(object):
 
     def _valid_actions_based_on_workload(self, workload):
         raise NotImplementedError
+
+    def _log_action(self, column_combination_idx, action, function):
+        logging.debug(
+            f"{function}: " +
+            f"{action} action {self.indexable_column_combinations_flat[column_combination_idx]}"
+        )
+
+    def _get_state_for_logging(self):
+        return {
+            'Current combinations': self.current_combinations,
+            'Remaining valid actions': self._remaining_valid_actions
+        }
 
 
 class MultiColumnIndexActionManager(ActionManager):
@@ -207,10 +232,16 @@ class MultiColumnIndexActionManager(ActionManager):
                 if column_combination in self.current_combinations:
                     continue
 
-                self._remaining_valid_actions.append(column_combination_idx)
+                self._log_action(
+                    column_combination_idx,
+                    "allow dependent",
+                    "_valid_actions_based_on_last_action"
+                )
+                add_if_not_exists(self._remaining_valid_actions, column_combination_idx)
                 self.valid_actions[column_combination_idx] = self.ALLOWED_ACTION
 
         # Disable invalid combinations
+        # TODO: действительно ли это необходимо?
         for column_combination_idx in copy.copy(self._remaining_valid_actions):
             column_combination = self.indexable_column_combinations_flat[column_combination_idx]
             column_combination_length = len(column_combination)
@@ -224,8 +255,8 @@ class MultiColumnIndexActionManager(ActionManager):
             if last_combination[:-1] != column_combination[:-1]:
                 continue
 
-            if column_combination_idx in self._remaining_valid_actions:
-                self._remaining_valid_actions.remove(column_combination_idx)
+            self._log_action(column_combination_idx, "forbid", "_valid_actions_based_on_last_action")
+            remove_if_exists(self._remaining_valid_actions, column_combination_idx)
             self.valid_actions[column_combination_idx] = self.FORBIDDEN_ACTION
 
         # TODO: какой смысл помечать родительские индексы валидными?
@@ -239,7 +270,9 @@ class MultiColumnIndexActionManager(ActionManager):
                     return
 
             column_combination_idx = self.column_combination_to_idx[str(last_combination_without_extension)]
-            self._remaining_valid_actions.append(column_combination_idx)
+
+            self._log_action(column_combination_idx, "allow", "_valid_actions_based_on_last_action")
+            add_if_not_exists(self._remaining_valid_actions, column_combination_idx)
             self.valid_actions[column_combination_idx] = self.ALLOWED_ACTION
 
             logging.debug(f"REENABLE_INDEXES: {last_combination_without_extension} after {last_combination}")
@@ -255,11 +288,11 @@ class MultiColumnIndexActionManager(ActionManager):
                 self.indexable_column_combinations[0]
             ):
                 if indexable_column == column_combination[0]:
+                    self._log_action(column_combination_idx, "allow", "_valid_actions_based_on_workload")
+                    add_if_not_exists(self._remaining_valid_actions, column_combination_idx)
                     self.valid_actions[column_combination_idx] = self.ALLOWED_ACTION
-                    self._remaining_valid_actions.append(column_combination_idx)
 
         assert np.count_nonzero(np.array(self.valid_actions) == self.ALLOWED_ACTION) == len(
             indexable_columns
         ), "Valid actions mismatch indexable columns"
-
 

@@ -68,3 +68,13 @@ def create_column_permutation_indexes(columns, max_index_width):
         result_column_combinations.append(list(unique))
 
     return result_column_combinations
+
+
+def add_if_not_exists(list_to_add: list, value):
+    if value not in list_to_add:
+        list_to_add.append(value)
+
+
+def remove_if_exists(list_to_remove: list, value):
+    if value in list_to_remove:
+        list_to_remove.remove(value)

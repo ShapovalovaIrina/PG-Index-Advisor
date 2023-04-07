@@ -101,7 +101,6 @@ class Index:
             return False
 
         return self.table == other.table \
-            and self.name == other.name \
             and tuple(self.columns) == tuple(other.columns)
 
     def __hash__(self):

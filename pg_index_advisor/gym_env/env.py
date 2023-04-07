@@ -1,4 +1,5 @@
 import collections
+import json
 import logging
 import copy
 import gym
@@ -78,12 +79,11 @@ class PGIndexAdvisorEnv(gym.Env):
         self.total_number_of_steps += self.steps_taken
 
         initial_observation = self._get_initial_observation()
-        info = self._get_info()
 
-        return initial_observation, info
+        return initial_observation
 
     def step(self, action):
-        logging.debug(f"Take action: {self._action_idx_to_str(action)}")
+        logging.info(f"Take action: {self._action_idx_to_str(action)}")
 
         self._step_asserts(action)
 
@@ -98,7 +98,7 @@ class PGIndexAdvisorEnv(gym.Env):
 
             for index in self.current_indexes:
                 if index == parent_index:
-                    old_index_size = index.estimates_size
+                    old_index_size = index.estimated_size
 
             self.current_indexes.remove(parent_index)
 
@@ -127,20 +127,24 @@ class PGIndexAdvisorEnv(gym.Env):
 
         info = self._get_info()
 
-        return current_observation, reward, episode_done, False, info
+        return current_observation, reward, episode_done, info
 
     def valid_action_mask(self):
-        return [bool(action) for action in self.valid_actions]
+        return [bool(action) for action in self.action_manager.valid_actions]
 
     def _step_asserts(self, action):
         assert self.action_space.contains(action), f"{action} ({type(action)}) invalid"
         assert (
             self.valid_actions[action] == self.action_manager.ALLOWED_ACTION
-        ), f"Agent has chosen invalid action: {action}"
+        ), f"""
+        Agent has chosen invalid action: {action} ({self._action_idx_to_str(action)}.
+        
+        State:
+        {json.dumps(self._get_env_state_for_debug(), indent=2)}
+        )"""
         assert (
             PotentialIndex(self.globally_indexable_columns[action]) not in self.current_indexes
         ), f"{PotentialIndex(self.globally_indexable_columns[action])} already in self.current_indexes"
-
 
     def _get_initial_observation(self):
         self.current_indexes = set()
@@ -253,6 +257,12 @@ class PGIndexAdvisorEnv(gym.Env):
 
     def _get_info(self):
         return {"action_mask": self.valid_actions}
+
+    def _get_env_state_for_debug(self):
+        return {
+            'Valid actions': self.valid_actions,
+            'Current indexes': self.current_indexes
+        }
 
     def render(self, mode="human"):
         logging.warning("render() was called")
