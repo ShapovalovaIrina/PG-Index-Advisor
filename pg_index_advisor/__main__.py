@@ -72,8 +72,7 @@ if __name__ == "__main__":
     model.learn(
         total_timesteps=index_advisor.config["timesteps"],
         callback=callbacks,
-        tb_log_name=index_advisor.id,
-        progress_bar=True
+        tb_log_name=index_advisor.id
     )
 
     index_advisor.finish_learning_time()
