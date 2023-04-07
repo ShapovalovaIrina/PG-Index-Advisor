@@ -8,6 +8,7 @@
   "result_path": "experiment_results",
   "filter_utilized_columns": false,
   "reenable_indexes": false,
+  "pickle_cost_estimation_caches": false,
   "validation_frequency": 10,
   "timesteps": 100,
   "rl_algorithm": {
@@ -36,7 +37,8 @@
     "varying_frequencies": true,
     "training_instances": 10,
     "validation_testing": {
-      "number_of_workloads": 5
+      "number_of_workloads": 5,
+      "unknown_query_probabilities": [0.0]
     },
     "excluded_query_classes": [],
     "similar_workloads": false

@@ -70,7 +70,7 @@ class PGIndexAdvisorEnv(gym.Env):
         self._get_initial_observation()
 
         if self.environment_type != environment_type.TRAINING:
-            self.episode_performance = collections.deque(maxlen=len(config["workloads"]))
+            self.episode_performances = collections.deque(maxlen=len(config["workloads"]))
 
     def reset(self, seed=None, options=None):
         logging.debug("reset() was called")
@@ -122,7 +122,7 @@ class PGIndexAdvisorEnv(gym.Env):
         reward = self.reward_manager.calculate_reward(environment_state)
 
         if episode_done and self.environment_type != EnvironmentType.TRAINING:
-            # TODO: report episode performance
+            self._report_episode_performance()
             self.current_workload_idx += 1
 
         info = self._get_info()
@@ -263,6 +263,34 @@ class PGIndexAdvisorEnv(gym.Env):
             'Valid actions': self.valid_actions,
             'Current indexes': self.current_indexes
         }
+
+    def get_cost_eval_cache_info(self):
+        return self.cost_evaluation.cost_requests, \
+            self.cost_evaluation.cache_hits, \
+            self.cost_evaluation.costing_time
+
+    def get_cost_eval_cache(self):
+        return self.cost_evaluation.cache
+
+    def _report_episode_performance(self):
+        episode_performance = {
+            "achieved_cost": self.current_costs / self.initial_costs * 100,
+            "memory_consumption": self.current_storage_consumption,
+            "available_budget": self.current_budget,
+            "evaluated_workload": self.current_workload,
+            "indexes": self.current_indexes,
+        }
+
+        output = (
+            f"Evaluated Workload ({self.environment_type}): {self.current_workload}\n    "
+            f"Initial cost: {self.initial_costs:,.2f}, now: {self.current_costs:,.2f} "
+            f"({episode_performance['achieved_cost']:.2f}). Reward: {self.reward_manager.accumulated_reward}.\n    "
+            f"Size: {b_to_mb(self.current_storage_consumption):.2f} with {len(self.current_indexes)} indexes:\n    "
+            f"{self.current_indexes}\n    "
+        )
+        logging.warning(output)
+
+        self.episode_performances.append(episode_performance)
 
     def render(self, mode="human"):
         logging.warning("render() was called")
