@@ -11,16 +11,11 @@ from gym_env.common import EnvironmentType
 PARALLEL_ENVIRONMENTS = 1
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.WARNING)
-
-    assert len(sys.argv) == 2, "System configuration file must be provided: main.py path_fo_file.json"
-    CONFIGURATION_FILE = sys.argv[1]
-
-    '''
+def learn(config_file):
+    """
     Parse configuration file and setup environment.
-    '''
-    index_advisor = IndexAdvisor(CONFIGURATION_FILE)
+    """
+    index_advisor = IndexAdvisor(config_file)
 
     index_advisor.prepare()
 
@@ -78,3 +73,65 @@ if __name__ == "__main__":
     index_advisor.finish_learning_time()
     index_advisor.finish_learning(training_env)
     index_advisor.write_report()
+
+
+def predict(config_file):
+    """
+    Parse configuration file and setup environment.
+    """
+    index_advisor = IndexAdvisor(config_file)
+
+    index_advisor.prepare()
+
+    VectorizedEnv = SubprocVecEnv if PARALLEL_ENVIRONMENTS > 1 else DummyVecEnv
+
+    env = VectorizedEnv(
+        [index_advisor.make_env(env_id) for env_id in range(PARALLEL_ENVIRONMENTS)]
+    )
+    env = VecNormalize(
+        env,
+        norm_obs=True,
+        norm_reward=False,
+        gamma=index_advisor.config["rl_algorithm"]["gamma"],
+        training=False
+    )
+
+    model = MaskablePPO.load(f"{index_advisor.folder_path}/best_model.zip", env=env)
+
+    vec_env = model.get_env()
+    obs = vec_env.reset()
+
+    done = False
+
+    while not done:
+        action_mask = vec_env.env_method("valid_action_mask")
+        action, _states = model.predict(
+            obs,
+            deterministic=True,
+            action_masks=action_mask
+        )
+        obs, rewards, dones, info = vec_env.step(action)
+
+        action = index_advisor.globally_indexable_columns_flat[action[0]]
+        done = dones[0]
+
+        print(f"""
+        Take action {action}.
+        Reward: {rewards[0]}.
+        Done: {done}.
+        """)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.WARNING)
+
+    assert len(sys.argv) == 3, "System configuration file must be provided: main.py path_fo_file.json action"
+
+    config_file = sys.argv[1]
+    action = sys.argv[2]
+
+    if action == 'learn':
+        learn(config_file)
+    elif action == 'predict':
+        predict(config_file)
+

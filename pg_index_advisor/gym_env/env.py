@@ -260,8 +260,8 @@ class PGIndexAdvisorEnv(gym.Env):
 
     def _get_env_state_for_debug(self):
         return {
-            'Valid actions': self.valid_actions,
-            'Current indexes': self.current_indexes
+            'Valid actions': ', '.join(map(str, self.valid_actions)),
+            'Current indexes': ', '.join(map(str, self.current_indexes))
         }
 
     def get_cost_eval_cache_info(self):
