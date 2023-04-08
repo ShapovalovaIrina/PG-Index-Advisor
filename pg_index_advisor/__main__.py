@@ -1,6 +1,7 @@
 import logging
 import sys
 import copy
+import argparse
 
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 from sb3_contrib.ppo_mask import MaskablePPO
@@ -11,31 +12,10 @@ from gym_env.common import EnvironmentType
 PARALLEL_ENVIRONMENTS = 1
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.WARNING)
+def learn(config_file):
+    index_advisor = get_index_advisor(config_file)
 
-    assert len(sys.argv) == 2, "System configuration file must be provided: main.py path_fo_file.json"
-    CONFIGURATION_FILE = sys.argv[1]
-
-    '''
-    Parse configuration file and setup environment.
-    '''
-    index_advisor = IndexAdvisor(CONFIGURATION_FILE)
-
-    index_advisor.prepare()
-
-    VectorizedEnv = SubprocVecEnv if PARALLEL_ENVIRONMENTS > 1 else DummyVecEnv
-
-    training_env = VectorizedEnv(
-        [index_advisor.make_env(env_id) for env_id in range(PARALLEL_ENVIRONMENTS)]
-    )
-    training_env = VecNormalize(
-        training_env,
-        norm_obs=True,
-        norm_reward=True,
-        gamma=index_advisor.config["rl_algorithm"]["gamma"],
-        training=True
-    )
+    training_env = get_env(index_advisor, EnvironmentType.TRAINING)
 
     # TODO: save env state to file (pickle)
 
@@ -78,3 +58,106 @@ if __name__ == "__main__":
     index_advisor.finish_learning_time()
     index_advisor.finish_learning(training_env)
     index_advisor.write_report()
+
+
+def predict(config_file):
+    index_advisor = get_index_advisor(config_file)
+
+    env = get_env(index_advisor, EnvironmentType.VALIDATION)
+
+    model = MaskablePPO.load(f"{index_advisor.folder_path}/best_model.zip", env=env)
+
+    vec_env = model.get_env()
+    obs = vec_env.reset()
+
+    done = False
+
+    while not done:
+        action_mask = vec_env.env_method("valid_action_mask")
+        action, _states = model.predict(
+            obs,
+            deterministic=True,
+            action_masks=action_mask
+        )
+        obs, rewards, dones, info = vec_env.step(action)
+
+        action = index_advisor.globally_indexable_columns_flat[action[0]]
+        done = dones[0]
+
+        print(f"""
+        Take action {action}.
+        Reward: {rewards[0]}.
+        Done: {done}.
+        """)
+
+
+def get_index_advisor(config_file):
+    """
+    Parse configuration file and setup environment.
+    """
+    index_advisor = IndexAdvisor(config_file)
+
+    index_advisor.prepare()
+
+    return index_advisor
+
+
+def get_env(index_advisor, env_type=EnvironmentType.TRAINING):
+    if env_type == EnvironmentType.TRAINING:
+        norm_reward = True
+        training = True
+        VectorizedEnv = SubprocVecEnv if PARALLEL_ENVIRONMENTS > 1 else DummyVecEnv
+        env = VectorizedEnv([
+            index_advisor.make_env(env_id, env_type)
+            for env_id
+            in range(PARALLEL_ENVIRONMENTS)
+        ])
+    else:
+        norm_reward = False
+        training = False
+        env = DummyVecEnv([index_advisor.make_env(0, env_type)])
+
+    env = VecNormalize(
+        env,
+        norm_obs=True,
+        norm_reward=norm_reward,
+        gamma=index_advisor.config["rl_algorithm"]["gamma"],
+        training=training
+    )
+
+    return env
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.WARNING)
+
+    parse = argparse.ArgumentParser()
+
+    parse.add_argument(
+        "-c",
+        "--config-file",
+        type=str,
+        dest="config",
+        required=True,
+        help="Path to the configuration file"
+    )
+    parse.add_argument(
+        "-a",
+        "--action",
+        type=str,
+        choices=['learn', 'predict'],
+        dest="action",
+        required=True,
+        help="Action to do"
+    )
+
+    args = parse.parse_args()
+
+    config_file = args.config
+    action = args.action
+
+    if action == 'learn':
+        learn(config_file)
+    elif action == 'predict':
+        predict(config_file)
+
