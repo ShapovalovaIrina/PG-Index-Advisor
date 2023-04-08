@@ -1,6 +1,7 @@
 import logging
 import sys
 import copy
+import argparse
 
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 from sb3_contrib.ppo_mask import MaskablePPO
@@ -12,25 +13,9 @@ PARALLEL_ENVIRONMENTS = 1
 
 
 def learn(config_file):
-    """
-    Parse configuration file and setup environment.
-    """
-    index_advisor = IndexAdvisor(config_file)
+    index_advisor = get_index_advisor(config_file)
 
-    index_advisor.prepare()
-
-    VectorizedEnv = SubprocVecEnv if PARALLEL_ENVIRONMENTS > 1 else DummyVecEnv
-
-    training_env = VectorizedEnv(
-        [index_advisor.make_env(env_id) for env_id in range(PARALLEL_ENVIRONMENTS)]
-    )
-    training_env = VecNormalize(
-        training_env,
-        norm_obs=True,
-        norm_reward=True,
-        gamma=index_advisor.config["rl_algorithm"]["gamma"],
-        training=True
-    )
+    training_env = get_env(index_advisor, EnvironmentType.TRAINING)
 
     # TODO: save env state to file (pickle)
 
@@ -76,25 +61,9 @@ def learn(config_file):
 
 
 def predict(config_file):
-    """
-    Parse configuration file and setup environment.
-    """
-    index_advisor = IndexAdvisor(config_file)
+    index_advisor = get_index_advisor(config_file)
 
-    index_advisor.prepare()
-
-    VectorizedEnv = SubprocVecEnv if PARALLEL_ENVIRONMENTS > 1 else DummyVecEnv
-
-    env = VectorizedEnv(
-        [index_advisor.make_env(env_id) for env_id in range(PARALLEL_ENVIRONMENTS)]
-    )
-    env = VecNormalize(
-        env,
-        norm_obs=True,
-        norm_reward=False,
-        gamma=index_advisor.config["rl_algorithm"]["gamma"],
-        training=False
-    )
+    env = get_env(index_advisor, EnvironmentType.VALIDATION)
 
     model = MaskablePPO.load(f"{index_advisor.folder_path}/best_model.zip", env=env)
 
@@ -122,13 +91,70 @@ def predict(config_file):
         """)
 
 
+def get_index_advisor(config_file):
+    """
+    Parse configuration file and setup environment.
+    """
+    index_advisor = IndexAdvisor(config_file)
+
+    index_advisor.prepare()
+
+    return index_advisor
+
+
+def get_env(index_advisor, env_type=EnvironmentType.TRAINING):
+    if env_type == EnvironmentType.TRAINING:
+        norm_reward = True
+        training = True
+        VectorizedEnv = SubprocVecEnv if PARALLEL_ENVIRONMENTS > 1 else DummyVecEnv
+        env = VectorizedEnv([
+            index_advisor.make_env(env_id, env_type)
+            for env_id
+            in range(PARALLEL_ENVIRONMENTS)
+        ])
+    else:
+        norm_reward = False
+        training = False
+        env = DummyVecEnv([index_advisor.make_env(0, env_type)])
+
+    env = VecNormalize(
+        env,
+        norm_obs=True,
+        norm_reward=norm_reward,
+        gamma=index_advisor.config["rl_algorithm"]["gamma"],
+        training=training
+    )
+
+    return env
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)
 
-    assert len(sys.argv) == 3, "System configuration file must be provided: main.py path_fo_file.json action"
+    parse = argparse.ArgumentParser()
 
-    config_file = sys.argv[1]
-    action = sys.argv[2]
+    parse.add_argument(
+        "-c",
+        "--config-file",
+        type=str,
+        dest="config",
+        required=True,
+        help="Path to the configuration file"
+    )
+    parse.add_argument(
+        "-a",
+        "--action",
+        type=str,
+        choices=['learn', 'predict'],
+        dest="action",
+        required=True,
+        help="Action to do"
+    )
+
+    args = parse.parse_args()
+
+    config_file = args.config
+    action = args.action
 
     if action == 'learn':
         learn(config_file)
