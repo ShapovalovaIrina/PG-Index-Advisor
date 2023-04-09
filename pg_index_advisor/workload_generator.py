@@ -1,10 +1,13 @@
 import random
 import logging
+import os
+import math
 
 import numpy as np
 
+from typing import List, Tuple
 from sql_metadata import Parser
-from index_selection_evaluation.selection.workload import Query, Workload
+from schema.structures import Query, Workload
 
 
 QUERY_PATH = "query_examples"
@@ -38,7 +41,8 @@ class WorkloadGenerator(object):
         self.excluded_query_classes = set()  # Empty set
         self.varying_frequencies = workload_config["varying_frequencies"]
 
-        # self.query_texts is list of lists. Outer list for query classes, inner list for instances of this class.
+        # self.query_texts is list of lists.
+        # Outer list for query classes, inner list for instances of this class.
         self.query_texts = self._retrieve_query_texts()
         self.query_classes = set(range(1, self.number_of_query_classes + 1))
         self.available_query_classes = self.query_classes - self.excluded_query_classes
@@ -57,6 +61,8 @@ class WorkloadGenerator(object):
                 sep='\n'
             )
 
+        query_classes_per_workload = workload_config["size"]
+        training_instances = workload_config["training_instances"]
         validation_instances = workload_config["validation_testing"]["number_of_workloads"]
         test_instances = workload_config["validation_testing"]["number_of_workloads"]
         self.wl_validation = [None]
@@ -65,10 +71,10 @@ class WorkloadGenerator(object):
         # TODO: Why training is list, validation and testing is list of lists???
         self.wl_training, self.wl_validation[0], self.wl_testing[0] = \
             self._generate_workloads(
-                workload_config["training_instances"],
+                training_instances,
                 validation_instances,
                 test_instances,
-                workload_config["size"]
+                query_classes_per_workload
             )
 
         if self.logging_mode == "verbose":
@@ -82,10 +88,15 @@ class WorkloadGenerator(object):
 
     @staticmethod
     def _set_number_of_query_classes():
-        # TODO: определение количества классов в зависимости от нагрузки
-        return 3
+        files_amount = len([
+            entry
+            for entry
+            in os.listdir(QUERY_PATH)
+            if os.path.isfile(os.path.join(QUERY_PATH, entry))
+        ])
+        return files_amount
 
-    def _retrieve_query_texts(self):
+    def _retrieve_query_texts(self) -> List[List[str]]:
         query_files = [
             open(f"{QUERY_PATH}/query_{file_number}.txt", "r")
             for file_number in range(1, self.number_of_query_classes + 1)
@@ -93,10 +104,8 @@ class WorkloadGenerator(object):
 
         queries = []
         for query_file in query_files:
-            """
-            Take only the first one if there are multiple examples of the query type
-            """
-            file_queries = query_file.readlines()[:1]
+            # TODO: раньше был выбор только первой строки. Проверить, не сломалось ли что
+            file_queries = query_file.readlines()
 
             queries.append(file_queries)
 
@@ -116,12 +125,13 @@ class WorkloadGenerator(object):
 
         logging.info(f"Selecting indexable columns on {len(available_query_classes)} query classes.")
 
+        # Returns list with the one item.
+        # The item is a list of queries (Query) for each class in available_query_classes
         workload = self._workloads_from_tuples([(available_query_classes, query_class_frequencies)])[0]
 
         indexable_columns = workload.indexable_columns()
-        if self.filter_utilized_columns:
-            # TODO: реализовать self._only_utilized_indexes(indexable_columns)???
-            indexable_columns = indexable_columns
+
+        # TODO: реализовать self._only_utilized_indexes(indexable_columns)???
 
         selected_columns = []
 
@@ -135,7 +145,11 @@ class WorkloadGenerator(object):
 
         return selected_columns
 
-    def _workloads_from_tuples(self, tuples, unknown_query_probability=None):
+    def _workloads_from_tuples(
+            self,
+            tuples: List[Tuple[Tuple[int, ...], Tuple[int, ...]]],
+            unknown_query_probability=None
+    ) -> List[Workload]:
         # TODO: Handle unknown queries
 
         workloads = []
@@ -144,7 +158,6 @@ class WorkloadGenerator(object):
             queries = []
 
             for query_class, frequency in zip(query_classes, query_class_frequencies):
-                # TODO: but it is always just one query text per query class?
                 query_text = self.rnd.choice(self.query_texts[query_class - 1])
 
                 query = Query(query_class, query_text, frequency=frequency)
@@ -184,15 +197,29 @@ class WorkloadGenerator(object):
             train_instances,
             validation_instances,
             test_instances,
-            size,
+            query_classes_per_workload,
             unknown_query_probability=None
     ):
         required_unique_workloads = train_instances + validation_instances + test_instances
 
+        logging.info(f"Required unique workload tuples: {required_unique_workloads}")
+
+        if not self.varying_frequencies:
+            query_classes_factorial = math.factorial(self.number_of_query_classes)
+            assert required_unique_workloads <= query_classes_factorial, \
+                f"""
+                Total workload amount must be less then factorial of the query classes.
+                Total workload amount: {required_unique_workloads}.
+                Query classes factorial: {self.number_of_query_classes}! = {query_classes_factorial}.
+                """
+
         unique_workload_tuples = set()
 
         while required_unique_workloads > len(unique_workload_tuples):
-            workload_tuple = self._generate_random_workload(size, unknown_query_probability)
+            workload_tuple = self._generate_random_workload(
+                query_classes_per_workload,
+                unknown_query_probability
+            )
             unique_workload_tuples.add(workload_tuple)
 
         validation_workload_tuples = self.rnd.sample(unique_workload_tuples, validation_instances)
@@ -202,7 +229,7 @@ class WorkloadGenerator(object):
         unique_workload_tuples = unique_workload_tuples - set(test_workload_tuples)
 
         assert len(unique_workload_tuples) == train_instances
-        train_workload_tuples = unique_workload_tuples
+        train_workload_tuples = list(unique_workload_tuples)
 
         assert (
                 len(train_workload_tuples) +
@@ -216,18 +243,24 @@ class WorkloadGenerator(object):
 
         return train_workloads, validation_workloads, test_workloads
 
-    def _generate_random_workload(self, size, unknown_query_probability=None):
-        assert size <= self.number_of_query_classes, \
+    def _generate_random_workload(
+            self,
+            query_classes_per_workload: int,
+            unknown_query_probability=None
+    ) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
+        assert query_classes_per_workload <= self.number_of_query_classes, \
             "Cannot generate workload with more queries than query classes"
 
         if unknown_query_probability is not None:
             raise NotImplementedError("Workload generation with unknown queries is not supported")
         else:
-            workload_query_classes = tuple(self.rnd.sample(self.available_query_classes, size))
+            workload_query_classes = tuple(self.rnd.sample(
+                self.available_query_classes, query_classes_per_workload
+            ))
 
         # Create frequencies
+        # Used in total cost calculation and observation
         if self.varying_frequencies:
-            # TODO: на что влияют частоты???
             """
             INFO:root:query_class: 1. frequency: 2087
             INFO:root:query_class: 3. frequency: 2033
@@ -238,11 +271,17 @@ class WorkloadGenerator(object):
             INFO:root:query_class: 3. frequency: 4293
             INFO:root:query_class: 1. frequency: 2039
             """
-            query_class_frequencies = tuple(list(self.np_rnd.integers(1, 10000, size)))
+            query_class_frequencies = tuple(list(self.np_rnd.integers(1, 10000, query_classes_per_workload)))
         else:
-            query_class_frequencies = tuple([1 for frequency in range(size)])
+            query_class_frequencies = tuple([
+                len(self.query_texts[query_class - 1])
+                for query_class
+                in workload_query_classes
+            ])
 
         workload_tuple = (workload_query_classes, query_class_frequencies)
+
+        logging.debug(f"Generate workload tuple: {workload_tuple}")
 
         return workload_tuple
 
