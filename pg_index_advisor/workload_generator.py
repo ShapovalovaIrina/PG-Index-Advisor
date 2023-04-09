@@ -104,7 +104,6 @@ class WorkloadGenerator(object):
 
         queries = []
         for query_file in query_files:
-            # TODO: раньше был выбор только первой строки. Проверить, не сломалось ли что
             file_queries = query_file.readlines()
 
             queries.append(file_queries)
