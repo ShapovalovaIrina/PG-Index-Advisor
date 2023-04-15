@@ -7,6 +7,7 @@ import numpy as np
 
 from typing import List, Tuple
 from sql_metadata import Parser
+from pglast import fingerprint
 from schema.structures import Query, Workload
 
 
@@ -37,13 +38,13 @@ class WorkloadGenerator(object):
         self.db_config = db_config
         self.views = views
 
-        self.number_of_query_classes = self._set_number_of_query_classes()
         self.excluded_query_classes = set()  # Empty set
         self.varying_frequencies = workload_config["varying_frequencies"]
 
         # self.query_texts is list of lists.
         # Outer list for query classes, inner list for instances of this class.
         self.query_texts = self._retrieve_query_texts()
+        self.number_of_query_classes = self._set_number_of_query_classes()
         self.query_classes = set(range(1, self.number_of_query_classes + 1))
         self.available_query_classes = self.query_classes - self.excluded_query_classes
 
@@ -86,35 +87,31 @@ class WorkloadGenerator(object):
 
 
 
-    @staticmethod
-    def _set_number_of_query_classes():
-        files_amount = len([
-            entry
-            for entry
-            in os.listdir(QUERY_PATH)
-            if os.path.isfile(os.path.join(QUERY_PATH, entry))
-        ])
-        return files_amount
+    def _set_number_of_query_classes(self):
+        return len(self.query_texts)
 
     def _retrieve_query_texts(self) -> List[List[str]]:
-        query_files = [
-            open(f"{QUERY_PATH}/query_{file_number}.txt", "r")
-            for file_number in range(1, self.number_of_query_classes + 1)
-        ]
+        query_file = open(f"{QUERY_PATH}/query.txt", "r")
 
-        queries = []
-        for query_file in query_files:
-            file_queries = query_file.readlines()
+        queries = {}
+        file_queries = query_file.readlines()
+        query_file.close()
 
-            queries.append(file_queries)
+        for query in file_queries:
+            query_fingerprint = fingerprint(query)
 
-            query_file.close()
+            if query_fingerprint in queries:
+                similar_queries = queries[query_fingerprint]
+                similar_queries.append(query)
+                queries[query_fingerprint] = similar_queries
+            else:
+                queries[query_fingerprint] = [query]
+
+        queries = list(queries.values())
 
         if self.logging_mode == "verbose":
             print("_retrieve_query_texts:", *queries, sep='\n')
             print()
-
-        assert len(queries) == self.number_of_query_classes
 
         return queries
 

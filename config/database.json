@@ -9,8 +9,8 @@
   "filter_utilized_columns": false,
   "reenable_indexes": false,
   "pickle_cost_estimation_caches": false,
-  "validation_frequency": 10,
-  "timesteps": 100,
+  "validation_frequency": 200,
+  "timesteps": 2000,
   "rl_algorithm": {
     "algorithm": "PPO",
     "gamma": 0.5,
