@@ -1,3 +1,0 @@
-SELECT a0."submitted_by", a0."company_id", a0."version" FROM "accepted_profile_application" AS a0 WHERE (a0."submitted_by" = 2000042467)
-SELECT a0."submitted_by", a0."company_id", a0."version" FROM "accepted_profile_application" AS a0 WHERE (a0."submitted_by" = 2000188607)
-SELECT a0."submitted_by", a0."company_id", a0."version" FROM "accepted_profile_application" AS a0 WHERE (a0."submitted_by" = 2000148603)
