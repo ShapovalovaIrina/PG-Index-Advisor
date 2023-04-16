@@ -150,7 +150,8 @@ class PGIndexAdvisorEnv(gym.Env):
         return old_index_size
 
     def valid_action_mask(self):
-        return [action == 1 for action in self.action_manager.valid_actions]
+        allowed_action = self.action_manager.ALLOWED_ACTION
+        return [action == allowed_action for action in self.action_manager.valid_actions]
 
     def _step_asserts(self, action):
         assert self.action_space.contains(action), f"{action} ({type(action)}) invalid"
