@@ -56,7 +56,7 @@ class Schema(object):
                 self.columns.append(column)
 
     def _read_existing_indexes(self):
-        indexes = self.generation_connector.exec_fetch(""" 
+        indexes = self.generation_connector.exec_fetch("""
         SELECT
             t.relname AS table_name,
             i.relname AS index_name,
@@ -85,6 +85,7 @@ class Schema(object):
             i.relname;
         """, one=False)
 
+        # TODO: use index definition for partial indexes
         for (table, index_name, columns, definition) in indexes:
             index = Index(table, index_name, columns)
             self.indexes.append(index)

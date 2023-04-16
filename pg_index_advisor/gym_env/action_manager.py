@@ -5,22 +5,23 @@ import copy
 import logging
 
 from gym import spaces
+from typing import List, Tuple
 
 from index_selection_evaluation.selection.utils import b_to_mb
-from pg_index_advisor.schema.structures import Index
+from pg_index_advisor.schema.structures import Index, Column
 from pg_index_advisor.utils import add_if_not_exists, remove_if_exists
 
-UNAVAILABLE_ACTION = -1
 FORBIDDEN_ACTION = 0
 ALLOWED_ACTION = 1
+APPLIED_ACTION = 2
 
 
 class ActionManager(object):
     def __init__(
             self,
-            max_index_width,
-            action_storage_consumptions,
-            existing_indexes
+            max_index_width: int,
+            action_storage_consumptions: List[int],
+            existing_indexes: List[Index]
     ):
         self.valid_actions = []
         # List of valid actions (combinations) IDs
@@ -37,9 +38,9 @@ class ActionManager(object):
         self.action_storage_consumptions = action_storage_consumptions
         self.existing_indexes = existing_indexes
 
-        self.UNAVAILABLE_ACTION = UNAVAILABLE_ACTION
         self.FORBIDDEN_ACTION = FORBIDDEN_ACTION
         self.ALLOWED_ACTION = ALLOWED_ACTION
+        self.APPLIED_ACTION = APPLIED_ACTION
 
     def get_action_space(self):
         return spaces.Discrete(self.number_of_actions)
@@ -119,8 +120,8 @@ class ActionManager(object):
     def _valid_actions_based_on_existing_indexes(self):
         for idx, action, action_availability in \
                 zip(range(self.number_of_actions), self.valid_actions, self.unavailable_actions):
-            if action_availability == self.UNAVAILABLE_ACTION:
-                self.valid_actions[idx] = UNAVAILABLE_ACTION
+            if action_availability == self.APPLIED_ACTION:
+                self.valid_actions[idx] = APPLIED_ACTION
                 remove_if_exists(self._remaining_valid_actions, idx)
 
     def _valid_actions_based_on_last_action(self, last_action):
@@ -143,10 +144,11 @@ class ActionManager(object):
             supposed_index = Index(tables[0], "", table_columns)
 
             for existing_index in self.existing_indexes:
-                equal_indexes = supposed_index.table == existing_index.table \
+                is_equal_indexes = supposed_index.table == existing_index.table \
                                 and tuple(supposed_index.columns) == tuple(existing_index.columns)
-                if equal_indexes:
-                    self.unavailable_actions[action_idx] = UNAVAILABLE_ACTION
+
+                if is_equal_indexes:
+                    self.unavailable_actions[action_idx] = APPLIED_ACTION
                     logging.warning(f"Mark combination {column_combination} unavailable "
                                     f"as it is present in existing indexes")
 
@@ -175,10 +177,10 @@ class MultiColumnIndexActionManager(ActionManager):
     """
     def __init__(
             self,
-            indexable_column_combinations: list,
-            indexable_column_combinations_flat: list,
-            action_storage_consumption: list,
-            existing_indexes: list,
+            indexable_column_combinations: List[List[Tuple[Column]]],
+            indexable_column_combinations_flat: List[Tuple[Column]],
+            action_storage_consumption: List[int],
+            existing_indexes: List[Index],
             max_index_width: int,
             reenable_indexes: bool
     ):
@@ -268,8 +270,9 @@ class MultiColumnIndexActionManager(ActionManager):
                 column_combination = self.indexable_column_combinations_flat[column_combination_idx]
                 possible_extended_column = column_combination[-1]
 
-                if self.valid_actions[column_combination_idx] == self.UNAVAILABLE_ACTION:
-                    continue
+                # action already applied by user, so unlock dependent actions
+                if self.valid_actions[column_combination_idx] == self.APPLIED_ACTION:
+                    self._valid_actions_based_on_last_action(column_combination_idx)
                 # wl_indexable_columns - columns from workload
                 if possible_extended_column not in self.wl_indexable_columns:
                     continue
@@ -316,7 +319,7 @@ class MultiColumnIndexActionManager(ActionManager):
 
             column_combination_idx = self.column_combination_to_idx[str(last_combination_without_extension)]
 
-            if self.valid_actions[column_combination_idx] == self.UNAVAILABLE_ACTION:
+            if self.valid_actions[column_combination_idx] == self.APPLIED_ACTION:
                 return
 
             self._log_action(column_combination_idx, "allow", "_valid_actions_based_on_last_action")
@@ -335,8 +338,9 @@ class MultiColumnIndexActionManager(ActionManager):
             for column_combination_idx, column_combination in enumerate(
                 self.indexable_column_combinations[0]
             ):
-                if self.valid_actions[column_combination_idx] == self.UNAVAILABLE_ACTION:
-                    return
+                # If index is created by user, so consider is as taken action
+                if self.valid_actions[column_combination_idx] == self.APPLIED_ACTION:
+                    self._valid_actions_based_on_last_action(column_combination_idx)
 
                 if indexable_column == column_combination[0]:
                     self._log_action(column_combination_idx, "allow", "_valid_actions_based_on_workload")
