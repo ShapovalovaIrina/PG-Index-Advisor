@@ -130,7 +130,7 @@ class PGIndexAdvisorEnv(gym.Env):
         return current_observation, reward, episode_done, info
 
     def valid_action_mask(self):
-        return [bool(action) for action in self.action_manager.valid_actions]
+        return [action == 1 for action in self.action_manager.valid_actions]
 
     def _step_asserts(self, action):
         assert self.action_space.contains(action), f"{action} ({type(action)}) invalid"

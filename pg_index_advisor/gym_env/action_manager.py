@@ -7,14 +7,21 @@ import logging
 from gym import spaces
 
 from index_selection_evaluation.selection.utils import b_to_mb
+from pg_index_advisor.schema.structures import Index
 from pg_index_advisor.utils import add_if_not_exists, remove_if_exists
 
+UNAVAILABLE_ACTION = -1
 FORBIDDEN_ACTION = 0
 ALLOWED_ACTION = 1
 
 
 class ActionManager(object):
-    def __init__(self, max_index_width, action_storage_consumptions):
+    def __init__(
+            self,
+            max_index_width,
+            action_storage_consumptions,
+            existing_indexes
+    ):
         self.valid_actions = []
         # List of valid actions (combinations) IDs
         self._remaining_valid_actions = []
@@ -23,11 +30,14 @@ class ActionManager(object):
         self.number_of_columns = 0
         self.current_combinations = set()
         self.indexable_column_combinations_flat = []
+        self.unavailable_actions = []
         self.column_to_idx = {}
 
         self.MAX_INDEX_WIDTH = max_index_width
         self.action_storage_consumptions = action_storage_consumptions
+        self.existing_indexes = existing_indexes
 
+        self.UNAVAILABLE_ACTION = UNAVAILABLE_ACTION
         self.FORBIDDEN_ACTION = FORBIDDEN_ACTION
         self.ALLOWED_ACTION = ALLOWED_ACTION
 
@@ -48,6 +58,7 @@ class ActionManager(object):
 
         self._valid_actions_based_on_workload(workload)
         self._valid_actions_based_on_budget(budget, current_storage_consumption=0)
+        self._valid_actions_based_on_existing_indexes()
 
         return np.array(self.valid_actions)
 
@@ -105,11 +116,39 @@ class ActionManager(object):
 
         self._remaining_valid_actions = new_remaining_actions
 
+    def _valid_actions_based_on_existing_indexes(self):
+        for idx, action, action_availability in \
+                zip(range(self.number_of_actions), self.valid_actions, self.unavailable_actions):
+            if action_availability == self.UNAVAILABLE_ACTION:
+                self.valid_actions[idx] = UNAVAILABLE_ACTION
+                remove_if_exists(self._remaining_valid_actions, idx)
+
     def _valid_actions_based_on_last_action(self, last_action):
         raise NotImplementedError
 
     def _valid_actions_based_on_workload(self, workload):
         raise NotImplementedError
+
+    def init_unavailable_action_mask(self):
+        self.unavailable_actions = [self.ALLOWED_ACTION for actions in range(self.number_of_actions)]
+
+        for action_idx, action in enumerate(self.unavailable_actions):
+            column_combination = self.indexable_column_combinations_flat[action_idx]
+
+            tables = [c.table.name for c in column_combination]
+            table_columns = [c.name for c in column_combination]
+            assert len(set(tables)) == 1, \
+                f"Have more then one table in column combination {column_combination}"
+
+            supposed_index = Index(tables[0], "", table_columns)
+
+            for existing_index in self.existing_indexes:
+                equal_indexes = supposed_index.table == existing_index.table \
+                                and tuple(supposed_index.columns) == tuple(existing_index.columns)
+                if equal_indexes:
+                    self.unavailable_actions[action_idx] = UNAVAILABLE_ACTION
+                    logging.warning(f"Mark combination {column_combination} unavailable "
+                                    f"as it is present in existing indexes")
 
     def _log_action(self, column_combination_idx, action, function):
         logging.debug(
@@ -139,13 +178,15 @@ class MultiColumnIndexActionManager(ActionManager):
             indexable_column_combinations: list,
             indexable_column_combinations_flat: list,
             action_storage_consumption: list,
+            existing_indexes: list,
             max_index_width: int,
             reenable_indexes: bool
     ):
         ActionManager.__init__(
             self,
             max_index_width=max_index_width,
-            action_storage_consumptions=action_storage_consumption
+            action_storage_consumptions=action_storage_consumption,
+            existing_indexes=existing_indexes
         )
 
         self.indexable_column_combinations = indexable_column_combinations
@@ -208,6 +249,8 @@ class MultiColumnIndexActionManager(ActionManager):
             dependent_of = column_combination[:-1]
             self.candidate_dependent_map[dependent_of].append(column_combination_idx)
 
+        self.init_unavailable_action_mask()
+
     def _valid_actions_based_on_last_action(self, last_action):
         """
         Update valid actions list based on the last action.
@@ -225,6 +268,8 @@ class MultiColumnIndexActionManager(ActionManager):
                 column_combination = self.indexable_column_combinations_flat[column_combination_idx]
                 possible_extended_column = column_combination[-1]
 
+                if self.valid_actions[column_combination_idx] == self.UNAVAILABLE_ACTION:
+                    continue
                 # wl_indexable_columns - columns from workload
                 if possible_extended_column not in self.wl_indexable_columns:
                     continue
@@ -271,6 +316,9 @@ class MultiColumnIndexActionManager(ActionManager):
 
             column_combination_idx = self.column_combination_to_idx[str(last_combination_without_extension)]
 
+            if self.valid_actions[column_combination_idx] == self.UNAVAILABLE_ACTION:
+                return
+
             self._log_action(column_combination_idx, "allow", "_valid_actions_based_on_last_action")
             add_if_not_exists(self._remaining_valid_actions, column_combination_idx)
             self.valid_actions[column_combination_idx] = self.ALLOWED_ACTION
@@ -287,6 +335,9 @@ class MultiColumnIndexActionManager(ActionManager):
             for column_combination_idx, column_combination in enumerate(
                 self.indexable_column_combinations[0]
             ):
+                if self.valid_actions[column_combination_idx] == self.UNAVAILABLE_ACTION:
+                    return
+
                 if indexable_column == column_combination[0]:
                     self._log_action(column_combination_idx, "allow", "_valid_actions_based_on_workload")
                     add_if_not_exists(self._remaining_valid_actions, column_combination_idx)

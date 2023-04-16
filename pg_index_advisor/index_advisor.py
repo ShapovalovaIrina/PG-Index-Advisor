@@ -108,7 +108,6 @@ class IndexAdvisor(object):
             self.globally_indexable_columns,
             self.config["max_index_width"]
         )
-        # TODO: filter globally_indexable_columns by existing indexes
 
         self.single_column_flat_set = set(map(lambda x: x[0], self.globally_indexable_columns[0]))
 
@@ -149,6 +148,7 @@ class IndexAdvisor(object):
                 indexable_column_combinations=self.globally_indexable_columns,
                 indexable_column_combinations_flat=self.globally_indexable_columns_flat,
                 action_storage_consumption=self.action_storage_consumptions,
+                existing_indexes=self.schema.indexes,
                 max_index_width=self.config["max_index_width"],
                 reenable_indexes=self.config["reenable_indexes"]
             )
