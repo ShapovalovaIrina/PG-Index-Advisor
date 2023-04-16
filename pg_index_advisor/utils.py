@@ -1,8 +1,9 @@
 import itertools
-import json
 import logging
+from typing import Union, Tuple
 
 from index_selection_evaluation.selection.cost_evaluation import CostEvaluation
+from schema.structures import Index, Column
 from schema.db_connector import UserPostgresDatabaseConnector
 from index_selection_evaluation.selection.index import Index as PotentialIndex
 
@@ -75,6 +76,15 @@ def add_if_not_exists(list_to_add: list, value):
         list_to_add.append(value)
 
 
-def remove_if_exists(list_to_remove: list, value):
-    if value in list_to_remove:
-        list_to_remove.remove(value)
+def remove_if_exists(collection_to_remove: Union[list, set], value):
+    if value in collection_to_remove:
+        collection_to_remove.remove(value)
+
+def index_from_column_combination(column_combination: Tuple[Column], name="", size=0):
+    tables = [c.table.name for c in column_combination]
+    table_columns = [c.name for c in column_combination]
+
+    assert len(set(tables)) == 1, \
+        f"Have more then one table in column combination {column_combination}"
+
+    return Index(tables[0], name, table_columns, size)

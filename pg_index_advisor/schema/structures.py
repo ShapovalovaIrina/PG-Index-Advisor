@@ -113,10 +113,12 @@ class Index:
             self,
             table: str,
             name: str,
-            columns: Union[str, List[str]]
+            columns: Union[str, List[str]],
+            size: int = 0
     ):
         self.table = table.lower()
         self.name = name.lower()
+        self.size = size
 
         if isinstance(columns, str):
             self.columns = columns.split(",")
@@ -126,7 +128,10 @@ class Index:
             raise Exception("Expected columns to be either string or list")
 
     def __repr__(self):
-        return self.name
+        if not self.name == "":
+            return self.name
+        else:
+            return f"INDEX ON {self.table} ({self.columns})"
 
     def __eq__(self, other):
         if not isinstance(other, Index):

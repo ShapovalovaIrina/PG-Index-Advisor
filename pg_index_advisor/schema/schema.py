@@ -61,7 +61,8 @@ class Schema(object):
             t.relname AS table_name,
             i.relname AS index_name,
             array_to_string(array_agg(a.attname), ',') AS column_names,
-            pg_get_indexdef(i.oid) AS index_definition
+            pg_get_indexdef(i.oid) AS index_definition,
+            pg_relation_size(ix.indexrelid)
         FROM
             pg_class t,
             pg_class i,
@@ -79,15 +80,16 @@ class Schema(object):
         GROUP BY
             t.relname,
             i.relname,
-            i.oid
+            i.oid,
+            ix.indexrelid
         ORDER BY
             t.relname,
             i.relname;
         """, one=False)
 
         # TODO: use index definition for partial indexes
-        for (table, index_name, columns, definition) in indexes:
-            index = Index(table, index_name, columns)
+        for (table, index_name, columns, definition, size) in indexes:
+            index = Index(table, index_name, columns, int(size))
             self.indexes.append(index)
 
     def _read_existing_views(self):

@@ -148,7 +148,7 @@ class IndexAdvisor(object):
                 indexable_column_combinations=self.globally_indexable_columns,
                 indexable_column_combinations_flat=self.globally_indexable_columns_flat,
                 action_storage_consumption=self.action_storage_consumptions,
-                existing_indexes=self.schema.indexes,
+                initial_indexes=self.schema.indexes,
                 max_index_width=self.config["max_index_width"],
                 reenable_indexes=self.config["reenable_indexes"]
             )
@@ -188,7 +188,8 @@ class IndexAdvisor(object):
                 "random_seed": self.config["random_seed"] + env_id,
                 "max_steps_per_episode": self.config["max_steps_per_episode"],
                 "env_id": env_id,
-                "similar_workloads": self.config["workload"]["similar_workloads"]
+                "similar_workloads": self.config["workload"]["similar_workloads"],
+                "initial_indexes": self.schema.indexes
             }
             env = gym.make(
                 "PGIndexAdvisor-v0",
