@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from index_selection_evaluation.selection.index import Index as PotentialIndex
 
@@ -109,13 +109,29 @@ class Table:
 
 
 class Index:
-    def __init__(self, table, name, columns):
+    def __init__(
+            self,
+            table: str,
+            name: str,
+            columns: Union[str, List[str]],
+            size: int = 0
+    ):
         self.table = table.lower()
         self.name = name.lower()
-        self.columns = columns.split(",")
+        self.size = size
+
+        if isinstance(columns, str):
+            self.columns = columns.split(",")
+        elif isinstance(columns, list):
+            self.columns = columns
+        else:
+            raise Exception("Expected columns to be either string or list")
 
     def __repr__(self):
-        return self.name
+        if not self.name == "":
+            return self.name
+        else:
+            return f"INDEX ON {self.table} ({self.columns})"
 
     def __eq__(self, other):
         if not isinstance(other, Index):

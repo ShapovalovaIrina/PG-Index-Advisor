@@ -6,13 +6,15 @@ import gym
 import random
 import numpy as np
 
-from typing import List
+from typing import List, Set
 
 from .common import EnvironmentType
 from .action_manager import MultiColumnIndexActionManager as ActionManager
 from .observation_manager import SingleColumnIndexPlanEmbeddingObservationManagerWithCost as ObservationManager
 from .reward_manager import CostAndStorageRewardManager as RewardManager
 from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector as DatabaseConnector
+from pg_index_advisor.utils import index_from_column_combination, remove_if_exists
+from pg_index_advisor.schema.structures import Index
 from index_selection_evaluation.selection.cost_evaluation import CostEvaluation
 from index_selection_evaluation.selection.index import Index as PotentialIndex
 from index_selection_evaluation.selection.utils import b_to_mb
@@ -23,8 +25,12 @@ class PGIndexAdvisorEnv(gym.Env):
     action_manager: ActionManager
     observation_manager: ObservationManager
     reward_manager: RewardManager
+
     workloads: List[Workload]
     current_workload: Workload
+
+    current_indexes: Set[PotentialIndex]
+    initial_indexes: Set[PotentialIndex]
 
     def __init__(self, environment_type=EnvironmentType.TRAINING, config=None):
         logging.debug("__init__() was called")
@@ -67,6 +73,8 @@ class PGIndexAdvisorEnv(gym.Env):
 
         self.reward_manager = config["reward_manager"]
 
+        self.initial_indexes = self._get_initial_indexes(config["initial_indexes"])
+
         self._get_initial_observation()
 
         if self.environment_type != environment_type.TRAINING:
@@ -96,11 +104,9 @@ class PGIndexAdvisorEnv(gym.Env):
         if not new_index.is_single_column():
             parent_index = PotentialIndex(new_index.columns[:-1])
 
-            for index in self.current_indexes:
-                if index == parent_index:
-                    old_index_size = index.estimated_size
+            old_index_size = self._get_parent_index_estimated_size(parent_index)
 
-            self.current_indexes.remove(parent_index)
+            remove_if_exists(self.current_indexes, parent_index)
 
             assert old_index_size > 0, \
                 "Parent index size must have been found if not single column index."
@@ -129,8 +135,23 @@ class PGIndexAdvisorEnv(gym.Env):
 
         return current_observation, reward, episode_done, info
 
+    def _get_parent_index_estimated_size(self, parent_index):
+        old_index_size = 0
+
+        for current_index in self.current_indexes:
+            if current_index == parent_index:
+                old_index_size = current_index.estimated_size
+
+        if not old_index_size:
+            for initial_index in self.initial_indexes:
+                if initial_index == parent_index:
+                    old_index_size = initial_index.estimated_size
+
+        return old_index_size
+
     def valid_action_mask(self):
-        return [bool(action) for action in self.action_manager.valid_actions]
+        allowed_action = self.action_manager.ALLOWED_ACTION
+        return [action == allowed_action for action in self.action_manager.valid_actions]
 
     def _step_asserts(self, action):
         assert self.action_space.contains(action), f"{action} ({type(action)}) invalid"
@@ -291,6 +312,30 @@ class PGIndexAdvisorEnv(gym.Env):
         logging.warning(output)
 
         self.episode_performances.append(episode_performance)
+
+    def _get_initial_indexes(self, indexes: List[Index]) -> Set[PotentialIndex]:
+        initial_indexes = set()
+
+        for action_idx, action in enumerate(self.action_manager.applied_actions):
+            if action == self.action_manager.APPLIED_ACTION:
+                column_combination = self.globally_indexable_columns[action_idx]
+                existing_index = index_from_column_combination(column_combination)
+
+                index_estimated_size = 0
+                for index in indexes:
+                    if index.table == existing_index.table and index.columns == existing_index.columns:
+                        index_estimated_size = index.size
+
+                assert index_estimated_size != 0, f"Index {existing_index} doesn't exist"
+
+                new_index = PotentialIndex(
+                    column_combination,
+                    estimated_size=index_estimated_size
+                )
+                logging.warning(f"Add existing index {new_index}")
+                initial_indexes.add(new_index)
+
+        return initial_indexes
 
     def render(self, mode="human"):
         logging.warning("render() was called")

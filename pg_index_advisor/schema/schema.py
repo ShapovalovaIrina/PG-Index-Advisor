@@ -27,7 +27,7 @@ class Schema(object):
         self._filter_tables(filters.get("table", {}))
         self._read_columns_from_tables()
         self._read_existing_indexes()
-        self._filter_indexes(filters.get("index", {}))
+        # self._filter_indexes(filters.get("index", {}))
         self._read_existing_views()
 
     def _read_tables(self):
@@ -60,28 +60,36 @@ class Schema(object):
         SELECT
             t.relname AS table_name,
             i.relname AS index_name,
-            array_to_string(array_agg(a.attname), ', ') AS column_names
+            array_to_string(array_agg(a.attname), ',') AS column_names,
+            pg_get_indexdef(i.oid) AS index_definition,
+            pg_relation_size(ix.indexrelid)
         FROM
             pg_class t,
             pg_class i,
             pg_index ix,
-            pg_attribute a
+            pg_attribute a,
+            pg_namespace ns
         WHERE
             t.oid = ix.indrelid
             AND i.oid = ix.indexrelid
             AND a.attrelid = t.oid
             AND a.attnum = ANY(ix.indkey)
+            AND t.relnamespace = ns.oid
             AND t.relkind = 'r'
+            AND ns.nspname = 'public'
         GROUP BY
             t.relname,
-            i.relname
-        ORDER BY 
+            i.relname,
+            i.oid,
+            ix.indexrelid
+        ORDER BY
             t.relname,
-            i.relname;        
+            i.relname;
         """, one=False)
 
-        for (table, index_name, columns) in indexes:
-            index = Index(table, index_name, columns)
+        # TODO: use index definition for partial indexes
+        for (table, index_name, columns, definition, size) in indexes:
+            index = Index(table, index_name, columns, int(size))
             self.indexes.append(index)
 
     def _read_existing_views(self):
