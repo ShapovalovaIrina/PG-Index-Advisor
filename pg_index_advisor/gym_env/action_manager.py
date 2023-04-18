@@ -25,8 +25,7 @@ class ActionManager(object):
     def __init__(
             self,
             max_index_width: int,
-            action_storage_consumptions: List[int],
-            initial_indexes: List[Index]
+            action_storage_consumptions: List[int]
     ):
         self.valid_actions = []
         # List of valid actions (combinations) IDs
@@ -37,12 +36,11 @@ class ActionManager(object):
         self.current_combinations = set()
         self.initial_combinations = set()
         self.indexable_column_combinations_flat = []
-        self.unavailable_actions = []
+        self.applied_actions = []
         self.column_to_idx = {}
 
         self.MAX_INDEX_WIDTH = max_index_width
         self.action_storage_consumptions = action_storage_consumptions
-        self.initial_indexes = initial_indexes
 
         self.FORBIDDEN_ACTION = FORBIDDEN_ACTION
         self.ALLOWED_ACTION = ALLOWED_ACTION
@@ -125,9 +123,9 @@ class ActionManager(object):
         self._remaining_valid_actions = new_remaining_actions
 
     def _valid_actions_based_on_initial_indexes(self):
-        for idx, action, action_availability in \
-                zip(range(self.number_of_actions), self.valid_actions, self.unavailable_actions):
-            if action_availability == self.APPLIED_ACTION:
+        for idx, action, applied_action in \
+                zip(range(self.number_of_actions), self.valid_actions, self.applied_actions):
+            if applied_action == self.APPLIED_ACTION:
                 self.valid_actions[idx] = APPLIED_ACTION
                 remove_if_exists(self._remaining_valid_actions, idx)
 
@@ -137,22 +135,18 @@ class ActionManager(object):
     def _valid_actions_based_on_workload(self, workload):
         raise NotImplementedError
 
-    def save_initial_indexes_combinations(self):
+    def save_initial_indexes_combinations(self, initial_indexes):
         self.initial_combinations = set()
-        self.unavailable_actions = [self.ALLOWED_ACTION for actions in range(self.number_of_actions)]
+        self.applied_actions = [self.ALLOWED_ACTION for actions in range(self.number_of_actions)]
 
         for action_idx, column_combination in enumerate(self.indexable_column_combinations_flat):
             supposed_index = index_from_column_combination(column_combination)
 
-            for initial_index in self.initial_indexes:
-                is_equal_indexes = supposed_index.table == initial_index.table \
-                                and tuple(supposed_index.columns) == tuple(initial_index.columns)
-
-                if is_equal_indexes:
-                    self.unavailable_actions[action_idx] = APPLIED_ACTION
-                    self.initial_combinations.add(tuple(column_combination))
-                    logging.warning(f"Mark combination {column_combination} unavailable "
-                                    f"as it is present in initial indexes")
+            if supposed_index in initial_indexes:
+                self.applied_actions[action_idx] = APPLIED_ACTION
+                self.initial_combinations.add(tuple(column_combination))
+                logging.warning(f"Mark combination {column_combination} applied "
+                                f"as it is present in initial indexes")
 
     def _log_action(self, column_combination_idx, action, function):
         logging.debug(
@@ -189,8 +183,7 @@ class MultiColumnIndexActionManager(ActionManager):
         ActionManager.__init__(
             self,
             max_index_width=max_index_width,
-            action_storage_consumptions=action_storage_consumption,
-            initial_indexes=initial_indexes
+            action_storage_consumptions=action_storage_consumption
         )
 
         self.indexable_column_combinations = indexable_column_combinations
@@ -253,7 +246,7 @@ class MultiColumnIndexActionManager(ActionManager):
             dependent_of = column_combination[:-1]
             self.candidate_dependent_map[dependent_of].append(column_combination_idx)
 
-        self.save_initial_indexes_combinations()
+        self.save_initial_indexes_combinations(initial_indexes)
 
     def _valid_actions_based_on_last_action(self, last_action):
         """
@@ -309,27 +302,6 @@ class MultiColumnIndexActionManager(ActionManager):
             self._log_action(column_combination_idx, "forbid", "_valid_actions_based_on_last_action")
             remove_if_exists(self._remaining_valid_actions, column_combination_idx)
             self.valid_actions[column_combination_idx] = self.FORBIDDEN_ACTION
-
-        # TODO: какой смысл помечать родительские индексы валидными?
-        if self.REENABLE_INDEXES and last_combination_length > 1:
-            last_combination_without_extension = last_combination[:-1]
-
-            if len(last_combination_without_extension) > 1:
-                # The presence of last_combination_without_extension's parent is a precondition
-                last_combination_without_extension_parent = last_combination_without_extension[:-1]
-                if last_combination_without_extension_parent not in self.current_combinations:
-                    return
-
-            column_combination_idx = self.column_combination_to_idx[str(last_combination_without_extension)]
-
-            if self.valid_actions[column_combination_idx] == self.APPLIED_ACTION:
-                return
-
-            self._log_action(column_combination_idx, "allow", "_valid_actions_based_on_last_action")
-            add_if_not_exists(self._remaining_valid_actions, column_combination_idx)
-            self.valid_actions[column_combination_idx] = self.ALLOWED_ACTION
-
-            logging.debug(f"REENABLE_INDEXES: {last_combination_without_extension} after {last_combination}")
 
     def _valid_actions_based_on_workload(self, workload):
         indexable_columns = workload.indexable_columns(return_sorted=False)

@@ -33,7 +33,7 @@ class PGIndexAdvisorEnv(gym.Env):
     initial_indexes: Set[PotentialIndex]
 
     def __init__(self, environment_type=EnvironmentType.TRAINING, config=None):
-        logging.info("__init__() was called")
+        logging.debug("__init__() was called")
 
         super(PGIndexAdvisorEnv, self).__init__()
 
@@ -81,7 +81,7 @@ class PGIndexAdvisorEnv(gym.Env):
             self.episode_performances = collections.deque(maxlen=len(config["workloads"]))
 
     def reset(self, seed=None, options=None):
-        logging.info("reset() was called")
+        logging.debug("reset() was called")
 
         self.number_of_resets += 1
         self.total_number_of_steps += self.steps_taken
@@ -316,7 +316,7 @@ class PGIndexAdvisorEnv(gym.Env):
     def _get_initial_indexes(self, indexes: List[Index]) -> Set[PotentialIndex]:
         initial_indexes = set()
 
-        for action_idx, action in enumerate(self.action_manager.unavailable_actions):
+        for action_idx, action in enumerate(self.action_manager.applied_actions):
             if action == self.action_manager.APPLIED_ACTION:
                 column_combination = self.globally_indexable_columns[action_idx]
                 existing_index = index_from_column_combination(column_combination)
