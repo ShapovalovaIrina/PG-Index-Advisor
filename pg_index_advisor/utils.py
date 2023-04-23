@@ -2,7 +2,7 @@ import itertools
 import logging
 from typing import Union, Tuple
 
-from index_selection_evaluation.selection.cost_evaluation import CostEvaluation
+from pg_index_advisor.schema.cost_evaluation import CostEvaluationWithHidingIndex as CostEvaluation
 from schema.structures import Index, Column
 from schema.db_connector import UserPostgresDatabaseConnector
 from index_selection_evaluation.selection.index import Index as PotentialIndex
@@ -80,7 +80,7 @@ def remove_if_exists(collection_to_remove: Union[list, set], value):
     if value in collection_to_remove:
         collection_to_remove.remove(value)
 
-def index_from_column_combination(column_combination: Tuple[Column], name="", size=0):
+def index_from_column_combination(column_combination: Tuple[Column], name="", size=0) -> Index:
     tables = [c.table.name for c in column_combination]
     table_columns = [c.name for c in column_combination]
 

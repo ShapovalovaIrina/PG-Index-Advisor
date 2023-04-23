@@ -129,7 +129,7 @@ def get_env(index_advisor, env_type=EnvironmentType.TRAINING):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(level=logging.INFO)
 
     parse = argparse.ArgumentParser()
 

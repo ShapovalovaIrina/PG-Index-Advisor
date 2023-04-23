@@ -12,7 +12,7 @@ class RewardManager(object):
         current_cost = environment_state["current_cost"]
         previous_cost = environment_state["previous_cost"]
         initial_cost = environment_state["initial_cost"]
-        new_index_size = environment_state["new_index_size"]
+        new_index_size = environment_state["new_index_relative_size"]
 
         assert new_index_size is not None
 
@@ -33,7 +33,7 @@ class CostAndStorageRewardManager(RewardManager):
         self.SCALER = 1
 
     def _calculate_reward(self, current_cost, previous_cost, initial_cost, new_index_size):
-        assert new_index_size > 0
+        assert abs(new_index_size) > 0
 
         reward = ((previous_cost - current_cost) / initial_cost) / b_to_mb(new_index_size) * self.SCALER
 

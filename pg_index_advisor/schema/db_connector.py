@@ -1,8 +1,10 @@
 import logging
 import psycopg2
+import time
 
 from index_selection_evaluation.selection.dbms.postgres_dbms import PostgresDatabaseConnector
 from index_selection_evaluation.selection.database_connector import DatabaseConnector
+from index_selection_evaluation.selection.index import Index as PotentialIndex
 
 
 class UserPostgresDatabaseConnector(PostgresDatabaseConnector):
@@ -26,7 +28,12 @@ class UserPostgresDatabaseConnector(PostgresDatabaseConnector):
         self.db_port = db_port
         self.create_connection()
 
+        self.hidden_indexes = 0
+
         self.set_random_seed()
+
+        self.exec_only("SET max_parallel_workers_per_gather = 0;")
+        self.exec_only("SET enable_bitmapscan TO off;")
 
         logging.debug("Postgres connector created: {}".format(db_name))
 
@@ -42,3 +49,47 @@ class UserPostgresDatabaseConnector(PostgresDatabaseConnector):
         )
         self._connection.autocommit = self.autocommit
         self._cursor = self._connection.cursor()
+
+    def hide_index(self, identifier):
+        self.hidden_indexes += 1
+
+        start_time = time.time()
+        self._hide_index(identifier)
+        end_time = time.time()
+        self.index_simulation_duration += end_time - start_time
+
+    def unhide_index(self, identifier):
+        start_time = time.time()
+        self._unhide_index(identifier)
+        end_time = time.time()
+        self.index_simulation_duration += end_time - start_time
+
+    def _hide_index(self, oid):
+        statement = f"SELECT hypopg_hide_index({oid});"
+        result = self.exec_fetch(statement)
+
+        assert result[0] is True, f"Could not hide read index with oid = {oid}."
+
+    def _unhide_index(self, oid):
+        statement = f"SELECT hypopg_unhide_index({oid});"
+        result = self.exec_fetch(statement)
+
+        assert result[0] is True, f"Could not unhide read index with oid = {oid}."
+
+    def drop_simulated_index(self, identifier):
+        start_time = time.time()
+        self._drop_simulated_index(identifier)
+        end_time = time.time()
+        self.index_simulation_duration += end_time - start_time
+
+    def unhide_all_indexes(self):
+        start_time = time.time()
+        self._unhide_all_indexes()
+        end_time = time.time()
+        self.index_simulation_duration += end_time - start_time
+
+    def _unhide_all_indexes(self):
+        statement = f"SELECT * FROM hypopg_unhide_all_indexes();"
+        result = self.exec_fetch(statement)
+
+        assert result[0] is True, f"Could not unhide all indexes."

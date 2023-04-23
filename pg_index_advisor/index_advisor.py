@@ -149,8 +149,7 @@ class IndexAdvisor(object):
                 indexable_column_combinations_flat=self.globally_indexable_columns_flat,
                 action_storage_consumption=self.action_storage_consumptions,
                 initial_indexes=self.schema.indexes,
-                max_index_width=self.config["max_index_width"],
-                reenable_indexes=self.config["reenable_indexes"]
+                max_index_width=self.config["max_index_width"]
             )
 
             if self.number_of_actions is None:

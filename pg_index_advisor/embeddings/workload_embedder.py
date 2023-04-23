@@ -2,7 +2,7 @@ import logging
 
 import gensim
 
-from index_selection_evaluation.selection.cost_evaluation import CostEvaluation
+from pg_index_advisor.schema.cost_evaluation import CostEvaluationWithHidingIndex as CostEvaluation
 from index_selection_evaluation.selection.index import Index
 from index_selection_evaluation.selection.workload import Query
 
