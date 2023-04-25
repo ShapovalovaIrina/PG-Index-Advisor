@@ -115,13 +115,15 @@ class RealIndex:
             name: str,
             oid: int,
             columns: Union[str, List[str]],
-            size: int = 0
+            size: int,
+            is_primary: bool
     ):
         self.table = table.lower()
         self.name = name.lower()
         self.oid = oid
 
         self.size = size
+        self.is_primary = is_primary
 
         if isinstance(columns, str):
             self.columns = columns.split(",")

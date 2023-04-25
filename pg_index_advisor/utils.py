@@ -79,11 +79,17 @@ def remove_if_exists(collection_to_remove: Union[list, set], value):
     if value in collection_to_remove:
         collection_to_remove.remove(value)
 
-def index_from_column_combination(column_combination: Tuple[Column], oid=0, name="", size=0) -> RealIndex:
+def index_from_column_combination(
+        column_combination: Tuple[Column],
+        oid=0,
+        name="",
+        size=0,
+        is_primary=False
+    ) -> RealIndex:
     tables = [c.table.name for c in column_combination]
     table_columns = [c.name for c in column_combination]
 
     assert len(set(tables)) == 1, \
         f"Have more then one table in column combination {column_combination}"
 
-    return RealIndex(tables[0], name, oid, table_columns, size)
+    return RealIndex(tables[0], name, oid, table_columns, size, is_primary)

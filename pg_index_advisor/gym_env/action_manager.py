@@ -364,7 +364,9 @@ class MultiColumnIndexActionManager(object):
             supposed_index = index_from_column_combination(column_combination)
 
             for index in initial_indexes:
-                if index.table == supposed_index.table and index.columns == supposed_index.columns:
+                if not index.is_primary and \
+                        index.table == supposed_index.table and \
+                        index.columns == supposed_index.columns:
                     assert index.size != 0, f"Index {supposed_index} doesn't exist"
 
                     new_index = PotentialIndex(
