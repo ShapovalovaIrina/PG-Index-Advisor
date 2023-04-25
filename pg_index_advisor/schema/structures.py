@@ -104,6 +104,12 @@ class Table:
 
         return self.name == other.name and tuple(self.columns) == tuple(other.columns)
 
+    def __lt__(self, other):
+        if not isinstance(other, Table):
+            return False
+
+        return self.name <= other.name
+
     def __hash__(self):
         return hash((self.name, tuple(self.columns)))
 
