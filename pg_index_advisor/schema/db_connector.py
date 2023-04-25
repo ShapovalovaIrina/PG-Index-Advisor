@@ -4,7 +4,7 @@ import time
 
 from index_selection_evaluation.selection.dbms.postgres_dbms import PostgresDatabaseConnector
 from index_selection_evaluation.selection.database_connector import DatabaseConnector
-from index_selection_evaluation.selection.index import Index as PotentialIndex
+from pg_index_advisor.schema.structures import PotentialIndex
 
 
 class UserPostgresDatabaseConnector(PostgresDatabaseConnector):
@@ -50,31 +50,31 @@ class UserPostgresDatabaseConnector(PostgresDatabaseConnector):
         self._connection.autocommit = self.autocommit
         self._cursor = self._connection.cursor()
 
-    def hide_index(self, identifier):
+    def hide_index(self, index_name):
         self.hidden_indexes += 1
 
         start_time = time.time()
-        self._hide_index(identifier)
+        self._hide_index(index_name)
         end_time = time.time()
         self.index_simulation_duration += end_time - start_time
 
-    def unhide_index(self, identifier):
+    def _hide_index(self, index_name):
+        statement = f"SELECT hypopg_hide_index('{index_name}'::regclass);"
+        result = self.exec_fetch(statement)
+
+        assert result[0] is True, f"Could not hide read index with name = {index_name}."
+
+    def unhide_index(self, index_name):
         start_time = time.time()
-        self._unhide_index(identifier)
+        self._unhide_index(index_name)
         end_time = time.time()
         self.index_simulation_duration += end_time - start_time
 
-    def _hide_index(self, oid):
-        statement = f"SELECT hypopg_hide_index({oid});"
+    def _unhide_index(self, index_name):
+        statement = f"SELECT hypopg_unhide_index('{index_name}'::regclass);"
         result = self.exec_fetch(statement)
 
-        assert result[0] is True, f"Could not hide read index with oid = {oid}."
-
-    def _unhide_index(self, oid):
-        statement = f"SELECT hypopg_unhide_index({oid});"
-        result = self.exec_fetch(statement)
-
-        assert result[0] is True, f"Could not unhide read index with oid = {oid}."
+        assert result[0] is True, f"Could not unhide read index with name = {index_name}."
 
     def drop_simulated_index(self, identifier):
         start_time = time.time()

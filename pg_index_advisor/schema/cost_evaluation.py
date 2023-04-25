@@ -10,7 +10,7 @@ class CostEvaluationWithHidingIndex(CostEvaluation):
 
         self.db_connector = db_connector
         self.cost_estimation = cost_estimation
-        
+
         logging.info("Cost estimation with " + self.cost_estimation)
         self.what_if = WhatIfIndex(db_connector)
 
@@ -103,5 +103,5 @@ class CostEvaluationWithHidingIndex(CostEvaluation):
             self.what_if.drop_all_simulated_indexes()
             self.what_if.drop_all_hidden_indexes()
 
-            self.current_indexes = {}
-            self.current_deleted_indexes = {}
+            self.current_indexes = set()
+            self.current_deleted_indexes = set()

@@ -14,9 +14,8 @@ from .observation_manager import SingleColumnIndexPlanEmbeddingObservationManage
 from .reward_manager import CostAndStorageRewardManager as RewardManager
 from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector as DatabaseConnector
 from pg_index_advisor.utils import index_from_column_combination, remove_if_exists
-from pg_index_advisor.schema.structures import Index
+from pg_index_advisor.schema.structures import RealIndex, PotentialIndex
 from pg_index_advisor.schema.cost_evaluation import CostEvaluationWithHidingIndex as CostEvaluation
-from index_selection_evaluation.selection.index import Index as PotentialIndex
 from index_selection_evaluation.selection.utils import b_to_mb
 from index_selection_evaluation.selection.workload import Workload
 
@@ -285,7 +284,7 @@ class PGIndexAdvisorEnv(gym.Env):
             new_index: PotentialIndex,
             old_index_size: int
     ):
-        self.cost_evaluation.update_created_indexes(self.current_created_indexes)
+        self.cost_evaluation.update_created_indexes(self.current_created_indexes, store_size=True)
 
         total_costs, plans_per_query, costs_per_query = \
             self.cost_evaluation.calculate_cost_and_plans(

@@ -81,11 +81,11 @@ def predict(config_file):
         )
         obs, rewards, dones, info = vec_env.step(action)
 
-        action = index_advisor.globally_indexable_columns_flat[action[0]]
+        columns = index_advisor.globally_indexable_columns_flat[action[0]]
         done = dones[0]
 
         print(f"""
-        Take action {action}.
+        Action: {columns}.
         Reward: {rewards[0]}.
         Done: {done}.
         """)
@@ -129,7 +129,7 @@ def get_env(index_advisor, env_type=EnvironmentType.TRAINING):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
 
     parse = argparse.ArgumentParser()
 

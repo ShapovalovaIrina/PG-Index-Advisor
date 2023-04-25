@@ -8,8 +8,7 @@ from gym import spaces
 from typing import List, Tuple, Set
 
 from index_selection_evaluation.selection.utils import b_to_mb
-from index_selection_evaluation.selection.index import Index as PotentialIndex
-from pg_index_advisor.schema.structures import Index, Column
+from pg_index_advisor.schema.structures import RealIndex, PotentialIndex, Column
 from pg_index_advisor.utils import add_if_not_exists, remove_if_exists, index_from_column_combination
 
 FORBIDDEN_ACTION = 0
@@ -39,7 +38,7 @@ class MultiColumnIndexActionManager(object):
             indexable_column_combinations: List[List[Tuple[Column]]],
             indexable_column_combinations_flat: List[Tuple[Column]],
             action_storage_consumption: List[int],
-            initial_indexes: List[Index],
+            initial_indexes: List[RealIndex],
             max_index_width: int
     ):
         self.valid_actions = []
@@ -356,7 +355,7 @@ class MultiColumnIndexActionManager(object):
 
     # INITIALIZE HELPERS
         
-    def _save_initial_indexes_combinations(self, initial_indexes: List[Index]):
+    def _save_initial_indexes_combinations(self, initial_indexes: List[RealIndex]):
         self.initial_combinations = set()
         self.initial_indexes = set()
         self.applied_actions = [self.FORBIDDEN_ACTION for actions in range(self.number_of_actions)]
@@ -370,7 +369,9 @@ class MultiColumnIndexActionManager(object):
 
                     new_index = PotentialIndex(
                         column_combination,
-                        estimated_size=index.size
+                        estimated_size=index.size,
+                        hypopg_name=index.name,
+                        hypopg_oid=index.oid
                     )
 
                     self.applied_actions[action_idx] = ALLOW_TO_DELETE
