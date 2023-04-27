@@ -120,23 +120,16 @@ class RealIndex:
             table: str,
             name: str,
             oid: int,
-            columns: Union[str, List[str]],
+            columns: List[str],
             size: int,
             is_primary: bool
     ):
         self.table = table.lower()
         self.name = name.lower()
         self.oid = oid
-
         self.size = size
         self.is_primary = is_primary
-
-        if isinstance(columns, str):
-            self.columns = columns.split(",")
-        elif isinstance(columns, list):
-            self.columns = columns
-        else:
-            raise Exception("Expected columns to be either string or list")
+        self.columns = columns
 
     def __repr__(self):
         if not self.name == "":
@@ -150,6 +143,10 @@ class RealIndex:
 
         return self.table == other.table \
             and tuple(self.columns) == tuple(other.columns)
+
+    def __lt__(self, other):
+        return self.table <= other.table \
+            and tuple(self.columns) < tuple(other.columns)
 
     def __hash__(self):
         return hash((self.table, self.name, tuple(self.columns)))
@@ -171,12 +168,14 @@ class View(object):
     def __repr__(self):
         return self.name
 
+    def __lt__(self, other):
+        return self.name < other.name
+
     def __eq__(self, other):
         if not isinstance(other, View):
             return False
 
-        return self.name == other.name \
-            and self.definition == other.definition
+        return self.name == other.name
 
     def __hash__(self):
         return hash((self.name, self.definition))
