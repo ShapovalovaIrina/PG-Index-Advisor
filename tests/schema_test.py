@@ -4,14 +4,9 @@ from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector
 from pg_index_advisor.schema.schema import Schema
 from pg_index_advisor.schema.structures import Table, Column, RealIndex, View
 
+from tests.resources.constants import *
 
 class SchemaTests(unittest.TestCase):
-    db_config = {
-        'database': 'advisor_tests',
-        'username': 'advisor_user',
-        'password': 'advisor_pass',
-        'port': 6543
-    }
     database_tables_dict = {
         'user_application': [
             'id',
@@ -53,7 +48,9 @@ class SchemaTests(unittest.TestCase):
         'profile_application',
         'accepted_profile_application',
         'vehicle_application',
-        'accepted_vehicle_application'
+        'accepted_vehicle_application',
+        'hypopg_hidden_indexes',
+        'hypopg_list_indexes'
     ]
     generation_connector = None
 
@@ -64,10 +61,10 @@ class SchemaTests(unittest.TestCase):
         sql = "\n".join(sql)
 
         cls.generation_connector = UserPostgresDatabaseConnector(
-            cls.db_config['database'],
-            cls.db_config['username'],
-            cls.db_config['password'],
-            db_port=cls.db_config['port'],
+            db_config['database'],
+            db_config['username'],
+            db_config['password'],
+            db_port=db_config['port'],
             autocommit=True
         )
         cls.generation_connector.exec_only(sql)
@@ -75,7 +72,7 @@ class SchemaTests(unittest.TestCase):
     def setUp(self):
         self.schema = object.__new__(Schema)
         self.schema.generation_connector = self.generation_connector
-        self.schema.db_config = self.db_config
+        self.schema.db_config = db_config
         self.schema.tables = []
         self.schema.columns = []
         self.schema.indexes = []

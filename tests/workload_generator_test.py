@@ -1,32 +1,12 @@
-import json
 import unittest
-import random
-
-import numpy as np
 
 from pg_index_advisor.schema.structures import View, Query
 from pg_index_advisor.workload_generator import WorkloadGenerator
 from pg_index_advisor.schema.schema import Table, Column
+from tests.resources.constants import *
 
 
 class WorkloadGeneratorTests(unittest.TestCase):
-    db_config = {
-        'database': 'advisor_tests',
-        'username': 'advisor_user',
-        'password': 'advisor_pass',
-        'port': 6543
-    }
-    workload_config = {
-        "size": 2,
-        "varying_frequencies": True,
-        "training_instances": 10,
-        "validation_testing": {
-          "number_of_workloads": 5,
-          "unknown_query_probabilities": [0.0]
-        },
-        "excluded_query_classes": [],
-        "similar_workloads": False
-      }
     queries = [
         [
             'SELECT v0."id", v0."version", v0."type", v0."status", v0."submitted_by", v0."vehicle_id" FROM "vehicle_application" AS v0 WHERE ((v0."vehicle_id" = \'8e31e5551a1a6c715a24d94cda164981cd2f74a71cb33adc034facefcd67f488\') AND (v0."submitted_by" = 2000042467))',
@@ -41,55 +21,8 @@ class WorkloadGeneratorTests(unittest.TestCase):
         [
             'SELECT a0."submitted_by", a0."company_id", a0."version" FROM "accepted_profile_application" AS a0 WHERE (a0."submitted_by" = 2000042467)',
             'SELECT a0."submitted_by", a0."company_id", a0."version" FROM "accepted_profile_application" AS a0 WHERE (a0."submitted_by" = 2000188607)'
-        ],
-
+        ]
     ]
-    profile_application_view = """
-    SELECT user_application.id,
-           user_application.version,
-           user_application.previous,
-           user_application.submitted_by,
-           user_application.submitted_at,
-           user_application.status,
-           user_application.type,
-           user_application.vehicle_id
-    FROM user_application
-    WHERE user_application.type = 10;
-    """
-    accepted_profile_application_view = """
-    SELECT a.submitted_by,
-           b.company_id,
-           max(a.version) AS version
-    FROM profile_application a
-             JOIN user_application_company_response b ON a.id = b.application_id
-    WHERE a.status = 15
-      AND b.result = 0
-    GROUP BY a.submitted_by, b.company_id;
-    """
-    vehicle_application_view = """
-    SELECT user_application.id,
-           user_application.version,
-           user_application.previous,
-           user_application.submitted_by,
-           user_application.submitted_at,
-           user_application.status,
-           user_application.type,
-           user_application.vehicle_id
-    FROM user_application
-    WHERE user_application.type = 20;
-    """
-    accepted_vehicle_application_view = """
-    SELECT a.submitted_by,
-           a.vehicle_id,
-           b.company_id,
-           max(a.version) AS version
-    FROM vehicle_application a
-             JOIN user_application_company_response b ON a.id = b.application_id
-    WHERE a.status = 15
-      AND b.result = 0
-    GROUP BY a.submitted_by, a.vehicle_id, b.company_id;
-    """
-
 
     def setUp(self):
         random_seed = 1
@@ -108,18 +41,18 @@ class WorkloadGeneratorTests(unittest.TestCase):
             Column('additional_details', table=table)
         ]
         views = [
-            View('profile_application', self.profile_application_view),
-            View('accepted_profile_application', self.accepted_profile_application_view),
-            View('vehicle_application', self.vehicle_application_view),
-            View('accepted_vehicle_application', self.accepted_vehicle_application_view),
+            View('profile_application', profile_application_view),
+            View('accepted_profile_application', accepted_profile_application_view),
+            View('vehicle_application', vehicle_application_view),
+            View('accepted_vehicle_application', accepted_vehicle_application_view),
         ]
 
         self.workload_generator = object.__new__(WorkloadGenerator)
         self.workload_generator._init_parameters(
-            self.workload_config,
+            workload_config,
             self.indexable_columns + not_indexable_columns,
             views,
-            self.db_config,
+            db_config,
             random_seed,
             1,
             False,
