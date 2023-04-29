@@ -242,3 +242,6 @@ class WorkloadGeneratorTests(unittest.TestCase):
                 self.workload_generator._store_indexable_columns(q)
                 
         return expected_queries
+
+if __name__ == '__main__':
+    unittest.main()

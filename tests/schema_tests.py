@@ -176,3 +176,6 @@ class SchemaTests(unittest.TestCase):
             views.append(view)
 
         return views
+
+if __name__ == '__main__':
+    unittest.main()
