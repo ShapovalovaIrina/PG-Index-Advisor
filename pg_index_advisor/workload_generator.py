@@ -8,7 +8,7 @@ import numpy as np
 from typing import List, Tuple
 from sql_metadata import Parser
 from pglast import fingerprint
-from schema.structures import Query, Workload
+from pg_index_advisor.schema.structures import Query, Workload
 
 
 QUERY_PATH = "query_examples"
@@ -25,21 +25,16 @@ class WorkloadGenerator(object):
                  filter_utilized_columns,
                  logging_mode
                  ):
-        # For create view statement differentiation
-        self.experiment_id = experiment_id
-        self.filter_utilized_columns = filter_utilized_columns
-        self.logging_mode = logging_mode
-
-        self.rnd = random.Random()
-        self.rnd.seed(random_seed)
-        self.np_rnd = np.random.default_rng(seed=random_seed)
-
-        self.schema_columns = columns
-        self.db_config = db_config
-        self.views = views
-
-        self.excluded_query_classes = set()  # Empty set
-        self.varying_frequencies = workload_config["varying_frequencies"]
+        self._init_parameters(
+            workload_config,
+            columns,
+            views,
+            db_config,
+            random_seed,
+            experiment_id,
+            filter_utilized_columns,
+            logging_mode
+        )
 
         # self.query_texts is list of lists.
         # Outer list for query classes, inner list for instances of this class.
@@ -85,23 +80,50 @@ class WorkloadGenerator(object):
 
         logging.info("Finished generating workloads.")
 
+    def _init_parameters(
+            self,
+            workload_config,
+            columns,
+            views,
+            db_config,
+            random_seed,
+            experiment_id,
+            filter_utilized_columns,
+            logging_mode
+    ):
+        self.experiment_id = experiment_id
+        self.filter_utilized_columns = filter_utilized_columns
+        self.logging_mode = logging_mode
 
+        self.rnd = random.Random()
+        self.rnd.seed(random_seed)
+        self.np_rnd = np.random.default_rng(seed=random_seed)
+
+        self.schema_columns = columns
+        self.db_config = db_config
+        self.views = views
+
+        self.excluded_query_classes = set()  # Empty set
+        self.varying_frequencies = workload_config["varying_frequencies"]
+
+        self.QUERY_PATH = QUERY_PATH
 
     def _set_number_of_query_classes(self):
         return len(self.query_texts)
 
     def _retrieve_query_texts(self) -> List[List[str]]:
-        query_file = open(f"{QUERY_PATH}/query.txt", "r")
+        query_file = open(f"{self.QUERY_PATH}/query.txt", "r")
 
         queries = {}
         file_queries = query_file.readlines()
         query_file.close()
 
         for query in file_queries:
+            query = query.strip('\r\n')
             query_fingerprint = fingerprint(query)
 
             if query_fingerprint in queries:
-                similar_queries = queries[query_fingerprint]
+                similar_queries = queries.get(query_fingerprint)
                 similar_queries.append(query)
                 queries[query_fingerprint] = similar_queries
             else:

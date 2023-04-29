@@ -27,7 +27,8 @@ create table if not exists user_application
     submitted_at                    timestamp with time zone,
     status                          integer                  not null,
     type                            integer                  not null,
-    vehicle_id                      varchar(255)
+    vehicle_id                      varchar(255),
+    additional_details              jsonb
 );
 
 -- USER_APPLICATION INDEXES

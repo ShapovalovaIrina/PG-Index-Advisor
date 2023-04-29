@@ -21,7 +21,8 @@ class SchemaTests(unittest.TestCase):
             'submitted_at',
             'status',
             'type',
-            'vehicle_id'
+            'vehicle_id',
+            'additional_details'
         ],
         'profiles': [
             'user_id',
@@ -58,7 +59,7 @@ class SchemaTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        with open('script.sql') as f:
+        with open('resources/script.sql') as f:
             sql = f.readlines()
         sql = "\n".join(sql)
 
@@ -85,9 +86,9 @@ class SchemaTests(unittest.TestCase):
 
         tables = self.tables_from_dict()
 
-        assert sorted(self.schema.tables) == sorted(tables), \
-            f"Expect schema tables to be equal to {tables}. " \
-            f"Actual: {self.schema.tables}"
+        self.assertEqual(sorted(self.schema.tables), sorted(tables),
+                         f"Expect schema tables to be equal to {tables}. "
+                         f"Actual: {self.schema.tables}")
 
     def test_filter_tables_by_name(self):
         allowed_tables = [
@@ -103,9 +104,9 @@ class SchemaTests(unittest.TestCase):
             if t.name in allowed_tables:
                 tables.append(t)
 
-        assert sorted(self.schema.tables) == sorted(tables), \
-            f"Expect schema tables to be equal to {tables}. " \
-            f"Actual: {self.schema.tables}"
+        self.assertEqual(sorted(self.schema.tables), sorted(tables),
+                         f"Expect schema tables to be equal to {tables}. "
+                         f"Actual: {self.schema.tables}")
 
     def test_read_columns(self):
         self.schema._read_tables()
@@ -117,35 +118,35 @@ class SchemaTests(unittest.TestCase):
             for c in t.columns:
                 columns.append(c)
 
-        assert sorted(self.schema.columns) == sorted(columns), \
-            f"Expect schema columns to be equal to {columns}. " \
-            f"Actual: {self.schema.columns}"
+        self.assertEqual(sorted(self.schema.columns), sorted(columns),
+                         f"Expect schema columns to be equal to {columns}. "
+                         f"Actual: {self.schema.columns}")
 
     def test_read_indexes(self):
         self.schema._read_existing_indexes()
 
         indexes = self.indexes_from_dict()
 
-        assert len(indexes) == len(self.schema.indexes), \
-            f"Read indexes length is {len(self.schema.indexes)} " \
-            f"when {len(indexes)} is expected."
+        self.assertEqual(len(indexes), len(self.schema.indexes),
+                         f"Read indexes length is {len(self.schema.indexes)} "
+                         f"when {len(indexes)} is expected.")
 
-        assert sorted(self.schema.indexes) == sorted(indexes), \
-            f"Expect schema indexes to be equal to {indexes}. " \
-            f"Actual: {self.schema.indexes}"
+        self.assertEqual(sorted(self.schema.indexes), sorted(indexes),
+                         f"Expect schema indexes to be equal to {indexes}. "
+                         f"Actual: {self.schema.indexes}")
 
     def test_read_views(self):
         self.schema._read_existing_views()
 
         views = self.views_from_dict()
 
-        assert len(views) == len(self.schema.views), \
-            f"Read views length is {len(self.schema.views)} " \
-            f"when {len(views)} is expected."
+        self.assertEqual(len(views), len(self.schema.views),
+                         f"Read views length is {len(self.schema.views)} "
+                         f"when {len(views)} is expected.")
 
-        assert sorted(self.schema.views) == sorted(views), \
-            f"Expect schema views to be equal to {views}. " \
-            f"Actual: {self.schema.views}"
+        self.assertEqual(sorted(self.schema.views), sorted(views),
+                         f"Expect schema views to be equal to {views}. "
+                         f"Actual: {self.schema.views}")
 
     def tables_from_dict(self):
         tables = []
@@ -171,11 +172,7 @@ class SchemaTests(unittest.TestCase):
         views = []
 
         for view in self.database_views_dict:
-            view = View(view, "")
+            view = View(view)
             views.append(view)
 
         return views
-
-
-if __name__ == "__main__":
-    unittest.main()

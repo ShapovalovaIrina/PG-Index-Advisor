@@ -56,9 +56,9 @@ class Workload:
 
 
 class Column:
-    def __init__(self, name):
+    def __init__(self, name, table=None):
         self.name = name.lower()
-        self.table = None
+        self.table = table
 
     def __lt__(self, other):
         return self.name < other.name
@@ -161,7 +161,7 @@ class PotentialIndex(Index):
 
 
 class View(object):
-    def __init__(self, name, definition):
+    def __init__(self, name, definition=""):
         self.name = name
         self.definition = definition.strip(";")
 
