@@ -74,6 +74,7 @@ class SchemaTests(unittest.TestCase):
     def setUp(self):
         self.schema = object.__new__(Schema)
         self.schema.generation_connector = self.generation_connector
+        self.schema.db_config = self.db_config
         self.schema.tables = []
         self.schema.columns = []
         self.schema.indexes = []
@@ -83,6 +84,24 @@ class SchemaTests(unittest.TestCase):
         self.schema._read_tables()
 
         tables = self.tables_from_dict()
+
+        assert sorted(self.schema.tables) == sorted(tables), \
+            f"Expect schema tables to be equal to {tables}. " \
+            f"Actual: {self.schema.tables}"
+
+    def test_filter_tables_by_name(self):
+        allowed_tables = [
+            "user_application",
+            "profiles"
+        ]
+
+        self.schema._read_tables()
+        self.schema._filter_tables({"TableNameFilter": {"allowed_tables": allowed_tables}})
+
+        tables = []
+        for t in self.tables_from_dict():
+            if t.name in allowed_tables:
+                tables.append(t)
 
         assert sorted(self.schema.tables) == sorted(tables), \
             f"Expect schema tables to be equal to {tables}. " \
@@ -116,7 +135,6 @@ class SchemaTests(unittest.TestCase):
             f"Actual: {self.schema.indexes}"
 
     def test_read_views(self):
-        self.schema.db_config = self.db_config
         self.schema._read_existing_views()
 
         views = self.views_from_dict()
