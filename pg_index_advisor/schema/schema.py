@@ -1,6 +1,6 @@
 import importlib
 
-from .structures import Index, View, Column, Table
+from .structures import RealIndex, View, Column, Table
 from .db_connector import UserPostgresDatabaseConnector
 
 
@@ -60,6 +60,8 @@ class Schema(object):
         SELECT
             t.relname AS table_name,
             i.relname AS index_name,
+            i.oid AS oid,
+            ix.indisprimary as is_primary,
             array_to_string(array_agg(a.attname), ',') AS column_names,
             pg_get_indexdef(i.oid) AS index_definition,
             pg_relation_size(ix.indexrelid)
@@ -81,15 +83,16 @@ class Schema(object):
             t.relname,
             i.relname,
             i.oid,
-            ix.indexrelid
+            ix.indexrelid,
+            ix.indisprimary
         ORDER BY
             t.relname,
             i.relname;
         """, one=False)
 
         # TODO: use index definition for partial indexes
-        for (table, index_name, columns, definition, size) in indexes:
-            index = Index(table, index_name, columns, int(size))
+        for (table, index_name, oid, is_primary, columns, definition, size) in indexes:
+            index = RealIndex(table, index_name, oid, columns, int(size), is_primary)
             self.indexes.append(index)
 
     def _read_existing_views(self):

@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from index_selection_evaluation.selection.index import Index as PotentialIndex
+from index_selection_evaluation.selection.index import Index
 
 
 class Query:
@@ -108,17 +108,22 @@ class Table:
         return hash((self.name, tuple(self.columns)))
 
 
-class Index:
+class RealIndex:
     def __init__(
             self,
             table: str,
             name: str,
+            oid: int,
             columns: Union[str, List[str]],
-            size: int = 0
+            size: int,
+            is_primary: bool
     ):
         self.table = table.lower()
         self.name = name.lower()
+        self.oid = oid
+
         self.size = size
+        self.is_primary = is_primary
 
         if isinstance(columns, str):
             self.columns = columns.split(",")
@@ -134,7 +139,7 @@ class Index:
             return f"INDEX ON {self.table} ({self.columns})"
 
     def __eq__(self, other):
-        if not isinstance(other, Index):
+        if not isinstance(other, RealIndex):
             return False
 
         return self.table == other.table \
@@ -142,6 +147,14 @@ class Index:
 
     def __hash__(self):
         return hash((self.table, self.name, tuple(self.columns)))
+
+
+class PotentialIndex(Index):
+    def __init__(self, columns, estimated_size=None, hypopg_name=None, hypopg_oid=None):
+        Index.__init__(self, columns, estimated_size)
+
+        self.hypopg_name = hypopg_name
+        self.hypopg_oid = hypopg_oid
 
 
 class View(object):
