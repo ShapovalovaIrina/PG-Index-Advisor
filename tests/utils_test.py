@@ -6,7 +6,7 @@ from pg_index_advisor.schema.structures import Table, Column
 from tests.resources.constants import *
 
 
-class UtilsTests(unittest.TestCase):
+class UtilsTest(unittest.TestCase):
     def setUp(self):
         self.table = Table('user_application')
         self.columns = [

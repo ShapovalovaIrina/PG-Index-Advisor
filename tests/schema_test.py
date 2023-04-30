@@ -6,7 +6,7 @@ from pg_index_advisor.schema.structures import Table, Column, RealIndex, View
 
 from tests.resources.constants import *
 
-class SchemaTests(unittest.TestCase):
+class SchemaTest(unittest.TestCase):
     database_tables_dict = {
         'user_application': [
             'id',
