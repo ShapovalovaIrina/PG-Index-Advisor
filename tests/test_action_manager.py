@@ -6,7 +6,7 @@ from pg_index_advisor.gym_env.action_manager import MultiColumnIndexActionManage
 from pg_index_advisor.schema.structures import Table, Column, RealIndex, PotentialIndex, Query, Workload
 
 
-class ActionManagerTest(unittest.TestCase):
+class TestActionManager(unittest.TestCase):
 
     def setUp(self) -> None:
         self.action_manager = object.__new__(MultiColumnIndexActionManager)

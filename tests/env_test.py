@@ -1,13 +1,13 @@
 import unittest
 
 
-class EnvTest(unittest.TestCase):
+class TestEnv(unittest.TestCase):
 
-    def test_init(self):
-        pass
+    def test_get_initial_observation(self):
+        self.fail()
 
     def test_reset(self):
-        pass
+        self.fail()
 
     def test_step(self):
-        pass
+        self.fail()

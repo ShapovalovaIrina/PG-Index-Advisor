@@ -6,7 +6,7 @@ from pg_index_advisor.schema.schema import Table, Column
 from tests.resources.constants import *
 
 
-class WorkloadGeneratorTest(unittest.TestCase):
+class TestWorkloadGenerator(unittest.TestCase):
     queries = [
         [
             'SELECT v0."id", v0."version", v0."type", v0."status", v0."submitted_by", v0."vehicle_id" FROM "vehicle_application" AS v0 WHERE ((v0."vehicle_id" = \'8e31e5551a1a6c715a24d94cda164981cd2f74a71cb33adc034facefcd67f488\') AND (v0."submitted_by" = 2000042467))',
@@ -175,6 +175,3 @@ class WorkloadGeneratorTest(unittest.TestCase):
                 self.workload_generator._store_indexable_columns(q)
                 
         return expected_queries
-
-if __name__ == '__main__':
-    unittest.main()

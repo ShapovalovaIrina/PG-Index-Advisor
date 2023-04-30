@@ -6,7 +6,7 @@ from pg_index_advisor.schema.structures import Table, Column, RealIndex, View
 
 from tests.resources.constants import *
 
-class SchemaTest(unittest.TestCase):
+class TestSchema(unittest.TestCase):
     database_tables_dict = {
         'user_application': [
             'id',
@@ -173,6 +173,3 @@ class SchemaTest(unittest.TestCase):
             views.append(view)
 
         return views
-
-if __name__ == '__main__':
-    unittest.main()
