@@ -57,42 +57,47 @@ class Schema(object):
 
     def _read_existing_indexes(self):
         indexes = self.generation_connector.exec_fetch("""
-        SELECT
-            t.relname AS table_name,
-            i.relname AS index_name,
-            i.oid AS oid,
-            ix.indisprimary as is_primary,
-            array_to_string(array_agg(a.attname), ',') AS column_names,
-            pg_get_indexdef(i.oid) AS index_definition,
-            pg_relation_size(ix.indexrelid)
-        FROM
-            pg_class t,
-            pg_class i,
-            pg_index ix,
-            pg_attribute a,
-            pg_namespace ns
-        WHERE
-            t.oid = ix.indrelid
-            AND i.oid = ix.indexrelid
-            AND a.attrelid = t.oid
-            AND a.attnum = ANY(ix.indkey)
-            AND t.relnamespace = ns.oid
-            AND t.relkind = 'r'
-            AND ns.nspname = 'public'
-        GROUP BY
-            t.relname,
-            i.relname,
-            i.oid,
-            ix.indexrelid,
-            ix.indisprimary
-        ORDER BY
-            t.relname,
-            i.relname;
+        SELECT t.relname                                  AS table_name,
+               i.relname                                  AS index_name,
+               i.oid                                      AS oid,
+               pg_get_indexdef(i.oid)                     AS index_definition,
+               pg_relation_size(ix.indexrelid)            AS index_size,
+               ix.indisprimary                            AS is_primary,
+               array_to_string(array_agg(a.attname), ' ') AS column_names,
+               ix.indkey                                  AS index_order,
+               array_to_string(array_agg(a.attnum), ' ')  AS columns_order
+        FROM pg_class t,
+             pg_class i,
+             pg_index ix,
+             pg_attribute a,
+             pg_namespace ns
+        WHERE t.oid = ix.indrelid
+          AND i.oid = ix.indexrelid
+          AND a.attrelid = t.oid
+          AND a.attnum = ANY (ix.indkey)
+          AND t.relnamespace = ns.oid
+          AND t.relkind = 'r'
+          AND ns.nspname = 'public'
+        GROUP BY t.relname,
+                 i.relname,
+                 i.oid,
+                 ix.indexrelid,
+                 ix.indisprimary,
+                 ix.indkey
+        ORDER BY t.relname,
+                 i.relname;
         """, one=False)
 
         # TODO: use index definition for partial indexes
-        for (table, index_name, oid, is_primary, columns, definition, size) in indexes:
-            index = RealIndex(table, index_name, oid, columns, int(size), is_primary)
+        for (table_name, index_name, oid, definition, size, is_primary, columns, index_columns_order,
+             row_columns_order) in indexes:
+            columns_numbers = dict(zip(row_columns_order.split(' '), columns.split(' ')))
+
+            columns = []
+            for i in index_columns_order.split(' '):
+                columns.append(columns_numbers[i])
+
+            index = RealIndex(table_name, index_name, oid, columns, int(size), is_primary)
             self.indexes.append(index)
 
     def _read_existing_views(self):

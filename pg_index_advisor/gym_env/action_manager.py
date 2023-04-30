@@ -100,17 +100,7 @@ class MultiColumnIndexActionManager(object):
             ...
         }
         """
-        self.candidate_dependent_map = {}
-        for column_combination in self.indexable_column_combinations_flat:
-            if len(column_combination) > max_index_width - 1:
-                continue
-            self.candidate_dependent_map[column_combination] = []
-
-        for column_combination_idx, column_combination in enumerate(self.indexable_column_combinations_flat):
-            if len(column_combination) < 2:
-                continue
-            dependent_of = column_combination[:-1]
-            self.candidate_dependent_map[dependent_of].append(column_combination_idx)
+        self._init_candidate_dependent_map(max_index_width)
 
         self._save_initial_indexes_combinations(initial_indexes)
         
@@ -303,6 +293,9 @@ class MultiColumnIndexActionManager(object):
             column_combination = self.indexable_column_combinations_flat[column_combination_idx]
             column_combination_length = len(column_combination)
 
+            if self.valid_actions[column_combination_idx] == self.ALLOW_TO_DELETE:
+                continue
+
             if column_combination_length == 1:
                 continue
 
@@ -376,7 +369,7 @@ class MultiColumnIndexActionManager(object):
                         hypopg_oid=index.oid
                     )
 
-                    self.applied_actions[action_idx] = ALLOW_TO_DELETE
+                    self.applied_actions[action_idx] = self.ALLOW_TO_DELETE
                     self.initial_combinations.add(tuple(column_combination))
                     self.initial_indexes.add(new_index)
 
@@ -385,6 +378,19 @@ class MultiColumnIndexActionManager(object):
                         f"mark combination as applied "
                         f"because it is present in initial indexes"
                     )
+
+    def _init_candidate_dependent_map(self, max_index_width):
+        self.candidate_dependent_map = {}
+        for column_combination in self.indexable_column_combinations_flat:
+            if len(column_combination) > max_index_width - 1:
+                continue
+            self.candidate_dependent_map[column_combination] = []
+
+        for column_combination_idx, column_combination in enumerate(self.indexable_column_combinations_flat):
+            if len(column_combination) < 2:
+                continue
+            dependent_of = column_combination[:-1]
+            self.candidate_dependent_map[dependent_of].append(column_combination_idx)
 
     # LOG HELPERS
 

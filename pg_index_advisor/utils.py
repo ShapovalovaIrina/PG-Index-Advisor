@@ -1,15 +1,19 @@
 import itertools
 import logging
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 
 from pg_index_advisor.schema.cost_evaluation import CostEvaluationWithHidingIndex as CostEvaluation
-from schema.structures import RealIndex, PotentialIndex, Column
-from schema.db_connector import UserPostgresDatabaseConnector
+from pg_index_advisor.schema.structures import RealIndex, PotentialIndex, Column
+from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector
 
 
 # Todo: This could be improved by passing index candidates as input
 # TODO: see TODO in simulate_index
-def predict_index_sizes(column_combinations, db_config, logging_mode):
+def predict_index_sizes(
+        column_combinations: List[Tuple[Column]],
+        db_config,
+        logging_mode=None
+):
     connector = UserPostgresDatabaseConnector(
         db_config["database"],
         db_config["username"],
