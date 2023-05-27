@@ -44,7 +44,7 @@ class IndexAdvisor(object):
         self.config = cp.config
 
         self.id = self.config["id"]
-        self.model = None
+        self.model = Nonegit ad
 
         self.rnd = random.Random()
         self.rnd.seed(self.config["random_seed"])
@@ -53,7 +53,6 @@ class IndexAdvisor(object):
         self.workload_generator = None
         self.number_of_features = None
         self.number_of_actions = None
-        self.workload_embedder = None
         self.evaluated_workloads_strs = []
         self.globally_indexable_columns = []
         self.single_column_flat_set = set()
@@ -126,13 +125,6 @@ class IndexAdvisor(object):
             self.config["logging"]
         )
 
-        self.workload_embedder = PlanEmbedderLSI(
-            self.workload_generator.query_texts,
-            self.config["workload_embedder"]["representation_size"],
-            self.globally_indexable_columns,
-            self.schema.db_config
-        )
-
         # TODO: in original paper there is multi_validation_wl, needs to figure out why this is
         assert len(self.workload_generator.wl_validation) == 1, \
             "Expected wl_validation to be one element list"
@@ -155,8 +147,15 @@ class IndexAdvisor(object):
             if self.number_of_actions is None:
                 self.number_of_actions = action_manager.number_of_actions
 
+            workload_embedder = PlanEmbedderLSI(
+                self.workload_generator.query_texts,
+                self.config["workload_embedder"]["representation_size"],
+                self.globally_indexable_columns,
+                self.schema.db_config
+            )
+
             observation_manager_config = {
-                "workload_embedder": self.workload_embedder,
+                "workload_embedder": workload_embedder,
                 "workload_size": self.config["workload"]["size"]
             }
             observation_manager = ObservationManager(
