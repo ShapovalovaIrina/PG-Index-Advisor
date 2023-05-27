@@ -44,7 +44,7 @@ class IndexAdvisor(object):
         self.config = cp.config
 
         self.id = self.config["id"]
-        self.model = Nonegit ad
+        self.model = None
 
         self.rnd = random.Random()
         self.rnd.seed(self.config["random_seed"])
