@@ -1,0 +1,72 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+'autonumber
+
+participant EntryPoint
+
+create IndexAdvisor
+EntryPoint -> IndexAdvisor : create
+
+EntryPoint -> IndexAdvisor : prepare()
+activate IndexAdvisor
+
+create Schema
+
+IndexAdvisor -> Schema : create
+activate Schema
+Schema -> IndexAdvisor : объекты схемы
+deactivate Schema
+
+create WorkloadGenerator
+IndexAdvisor -> WorkloadGenerator : create
+activate WorkloadGenerator
+WorkloadGenerator -> IndexAdvisor : нагрузка, список атрибутов \nдля индексирования
+deactivate WorkloadGenerator
+
+IndexAdvisor -> IndexAdvisor : перестановки атрибутов \nW_max
+
+IndexAdvisor -> IndexAdvisor : оценка размеров индексов
+
+IndexAdvisor -> EntryPoint : ok
+deactivate IndexAdvisor
+
+
+EntryPoint -> IndexAdvisor : make_env()
+activate IndexAdvisor
+
+create ActionManager
+IndexAdvisor -> ActionManager : create
+activate ActionManager
+ActionManager -> IndexAdvisor : ok
+deactivate ActionManager
+
+create ObservationManager
+IndexAdvisor -> ObservationManager : create
+activate ObservationManager
+ObservationManager -> IndexAdvisor : ok
+deactivate ObservationManager
+
+create RewardManager
+IndexAdvisor -> RewardManager : create
+activate RewardManager
+RewardManager -> IndexAdvisor : ok
+deactivate RewardManager
+
+create Env
+IndexAdvisor -> Env : gym.make()
+activate Env
+Env -> IndexAdvisor : ok
+deactivate Env
+
+IndexAdvisor -> EntryPoint : Env
+deactivate IndexAdvisor
+
+EntryPoint -> EntryPoint : создать модель \nMaskablePPO
+
+EntryPoint -> EntryPoint : обучение
+
+EntryPoint -> IndexAdvisor : генерация отчета
+IndexAdvisor -> EntryPoint : report.txt
+
+@enduml
