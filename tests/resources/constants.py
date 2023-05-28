@@ -3,7 +3,7 @@ db_config = {
     'database': 'advisor_tests',
     'username': 'advisor_user',
     'password': 'advisor_pass',
-    'port': 6543
+    'port': 5432
 }
 
 workload_config = {

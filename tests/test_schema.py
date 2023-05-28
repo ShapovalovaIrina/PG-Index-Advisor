@@ -1,4 +1,5 @@
 import unittest
+import os
 
 from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector
 from pg_index_advisor.schema.schema import Schema
@@ -56,7 +57,8 @@ class TestSchema(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        with open('resources/script.sql') as f:
+        script_filename = f'{os.getcwd()}/tests/resources/script.sql'
+        with open(script_filename) as f:
             sql = f.readlines()
         sql = "\n".join(sql)
 

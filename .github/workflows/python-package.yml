@@ -1,0 +1,43 @@
+name: Python package
+
+on:
+  push:
+    branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
+
+jobs:
+  build_and_test:
+
+    runs-on: ubuntu-latest
+
+    services:
+      localhost:
+        image: postgres:latest
+        ports: [ '5432:5432' ]
+        env:
+          POSTGRES_PASSWORD: advisor_pass
+          POSTGRES_USER: advisor_user
+          POSTGRES_DB: advisor_tests
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      run: |
+        git submodule update --init --recursive
+        python -m pip install --upgrade pip
+        if [ -f test_requirements.txt ]; then pip install -r test_requirements.txt; fi
+
+    - name: Test with unittest
+      run: |
+        python -m unittest discover tests
