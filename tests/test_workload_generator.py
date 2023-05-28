@@ -1,4 +1,5 @@
 import unittest
+import os
 
 from pg_index_advisor.schema.structures import View, Query
 from pg_index_advisor.workload_generator import WorkloadGenerator
@@ -58,7 +59,7 @@ class TestWorkloadGenerator(unittest.TestCase):
             False,
             False
         )
-        self.workload_generator.QUERY_PATH = 'resources'
+        self.workload_generator.QUERY_PATH = f'{os.getcwd()}/tests/resources'
 
     def test_retrieve_query_texts(self):
         queries = self.workload_generator._retrieve_query_texts()
