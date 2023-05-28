@@ -1,0 +1,78 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+skinparam responseMessageBelowArrow true
+
+participant Env
+participant ActionManager
+participant ObservationManager
+participant RewardManager
+
+create CostEvaluation
+Env -> CostEvaluation : create
+activate CostEvaluation
+CostEvaluation -> Env : ok
+deactivate CostEvaluation
+
+Env -> ActionManager : get_action_space()
+ActionManager -> Env : action_space
+
+Env -> ObservationManager : get_observation_space()
+ObservationManager -> Env : observation_space
+
+
+group get_initial_observation
+    Env -> Env : init:\n- current_created_indexes\n- current_deleted_indexes
+    Env -> Env : init\ncurrent_storage_consumption
+
+    Env -> RewardManager : reset()
+    RewardManager -> Env : ok
+
+    Env -> ActionManager : get_initial_valid_actions()
+    ActionManager -> Env : valid_actions
+
+    Env -> CostEvaluation : calculate_cost_and_plans(workload, current_indexes)
+    CostEvaluation -> Env : total_costs, plans_per_query, costs_per_query
+
+    Env -> Env : get_env_state()
+
+    Env -> ObservationManager : init_episode()
+    ObservationManager -> Env : ok
+
+    Env -> ObservationManager : get_observation(env_state)
+    ObservationManager -> Env : initial_observation
+end
+
+loop Количество эпизодов
+    group reset()
+        Env -> Env : get_initial_observation()
+    end
+
+    loop Количество шагов
+        group step()
+            alt Создать индекс
+                Env -> CostEvaluation : create_index()
+                CostEvaluation -> Env : ok
+            else Удалить индекс
+                Env -> CostEvaluation : delete_index()
+                CostEvaluation -> Env : ok
+            end
+        end
+
+        Env -> CostEvaluation : calculate_cost_and_plans(workload, current_indexes)
+        CostEvaluation -> Env : total_costs, plans_per_query, costs_per_query
+
+        Env -> Env : get_env_state()
+
+        Env -> ObservationManager : get_observation(env_state)
+        ObservationManager -> Env : current_observation
+
+        Env -> ActionManager : update_valid_actions()
+        ActionManager -> Env : valid_actions
+
+        Env -> RewardManager : calculate_reward(env_state)
+        RewardManager -> Env : reward
+    end
+end
+
+@enduml

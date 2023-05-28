@@ -1,7 +1,7 @@
 @startuml
 'https://plantuml.com/sequence-diagram
 
-'autonumber
+skinparam responseMessageBelowArrow true
 
 participant EntryPoint
 
@@ -54,7 +54,7 @@ RewardManager -> IndexAdvisor : ok
 deactivate RewardManager
 
 create Env
-IndexAdvisor -> Env : gym.make()
+IndexAdvisor -> Env : gym.make(ActionManager, ObservationManager, RewardManager)
 activate Env
 Env -> IndexAdvisor : ok
 deactivate Env
@@ -62,9 +62,19 @@ deactivate Env
 IndexAdvisor -> EntryPoint : Env
 deactivate IndexAdvisor
 
-EntryPoint -> EntryPoint : создать модель \nMaskablePPO
+create MaskablePPO
+EntryPoint -> MaskablePPO : create(Env)
+activate MaskablePPO
+MaskablePPO -> EntryPoint : model
+deactivate MaskablePPO
 
-EntryPoint -> EntryPoint : обучение
+EntryPoint -> IndexAdvisor : save(model)
+IndexAdvisor -> EntryPoint : ok
+
+EntryPoint -> MaskablePPO : learn()
+activate MaskablePPO
+MaskablePPO -> EntryPoint : ok
+deactivate MaskablePPO
 
 EntryPoint -> IndexAdvisor : генерация отчета
 IndexAdvisor -> EntryPoint : report.txt
