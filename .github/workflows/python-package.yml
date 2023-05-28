@@ -32,9 +32,14 @@ jobs:
       with:
         python-version: '3.8'
 
+    - name: Clone index_selection_evaluation repository
+      uses: GuillaumeFalourd/clone-github-repo-action@v2
+      with:
+        owner: 'hyrise'
+        repository: 'index_selection_evaluation'
+
     - name: Install dependencies
       run: |
-        git submodule update --init --recursive
         python -m pip install --upgrade pip
         if [ -f test_requirements.txt ]; then pip install -r test_requirements.txt; fi
 
