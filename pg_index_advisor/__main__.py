@@ -1,12 +1,13 @@
 import logging
 import copy
 
+import pg_index_advisor.cli_parser
+
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 from sb3_contrib.ppo_mask import MaskablePPO
 
-import pg_index_advisor.cli_parser
-from index_advisor import IndexAdvisor
-from gym_env.common import EnvironmentType
+from pg_index_advisor.index_advisor import IndexAdvisor
+from pg_index_advisor.gym_env.common import EnvironmentType
 
 PARALLEL_ENVIRONMENTS = 1
 
