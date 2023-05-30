@@ -1,11 +1,10 @@
 import logging
-import sys
 import copy
-import argparse
 
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 from sb3_contrib.ppo_mask import MaskablePPO
 
+import pg_index_advisor.cli_parser
 from index_advisor import IndexAdvisor
 from gym_env.common import EnvironmentType
 
@@ -131,27 +130,8 @@ def get_env(index_advisor, env_type=EnvironmentType.TRAINING):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)
 
-    parse = argparse.ArgumentParser()
-
-    parse.add_argument(
-        "-c",
-        "--config-file",
-        type=str,
-        dest="config",
-        required=True,
-        help="Path to the configuration file"
-    )
-    parse.add_argument(
-        "-a",
-        "--action",
-        type=str,
-        choices=['learn', 'predict'],
-        dest="action",
-        required=True,
-        help="Action to do"
-    )
-
-    args = parse.parse_args()
+    parser = pg_index_advisor.cli_parser.CLIParser().create_parser()
+    args = parser.parse_args()
 
     config_file = args.config
     action = args.action
