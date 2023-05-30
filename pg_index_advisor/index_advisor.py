@@ -6,11 +6,10 @@ import random
 import os
 import subprocess
 
-import utils
 import gym
 import numpy as np
 
-from configuration_parser import ConfigurationParser
+from pg_index_advisor.configuration_parser import ConfigurationParser
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -22,14 +21,14 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.vec_env import sync_envs_normalization
 from stable_baselines3.common.utils import set_random_seed
 
-from schema.schema import Schema
-from workload_generator import WorkloadGenerator
-from embeddings.workload_embedder import PlanEmbedderLSI
-from gym_env.common import EnvironmentType
-from gym_env.action_manager import MultiColumnIndexActionManager as ActionManager
-from gym_env.observation_manager import SingleColumnIndexPlanEmbeddingObservationManagerWithCost as ObservationManager
-from gym_env.reward_manager import CostAndStorageRewardManager as RewardManager
-from gym_env.env import PGIndexAdvisorEnv
+from pg_index_advisor.schema.schema import Schema
+from pg_index_advisor.workload_generator import WorkloadGenerator
+from pg_index_advisor.embeddings.workload_embedder import PlanEmbedderLSI
+from pg_index_advisor.gym_env.common import EnvironmentType
+from pg_index_advisor.gym_env.action_manager import MultiColumnIndexActionManager as ActionManager
+from pg_index_advisor.gym_env.observation_manager import SingleColumnIndexPlanEmbeddingObservationManagerWithCost as ObservationManager
+from pg_index_advisor.gym_env.reward_manager import CostAndStorageRewardManager as RewardManager
+from pg_index_advisor.gym_env.env import PGIndexAdvisorEnv
 
 
 def mask_fn(env: PGIndexAdvisorEnv) -> List[bool]:
