@@ -10,6 +10,7 @@ import gym
 import numpy as np
 
 from pg_index_advisor.configuration_parser import ConfigurationParser
+from pg_index_advisor import utils
 from datetime import datetime, timedelta
 from typing import List, Optional
 

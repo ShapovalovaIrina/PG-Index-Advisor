@@ -1,3 +1,4 @@
 *__pycache__/
 pg_index_advisor/experiment_results
 pg_index_advisor/tensor_log
+benchmarks/TPC-H/data

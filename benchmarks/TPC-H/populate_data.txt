@@ -1,0 +1,8 @@
+\copy customer FROM '/home/irina/PG-Index-Advisor/benchmarks/TPC-H/data/customer.tbl' DELIMITER '|'
+\copy lineitem FROM '/home/irina/PG-Index-Advisor/benchmarks/TPC-H/data/lineitem.tbl' DELIMITER '|'
+\copy nation FROM '/home/irina/PG-Index-Advisor/benchmarks/TPC-H/data/nation.tbl' DELIMITER '|'
+\copy public.order FROM '/home/irina/PG-Index-Advisor/benchmarks/TPC-H/data/orders.tbl' DELIMITER '|'
+\copy part FROM '/home/irina/PG-Index-Advisor/benchmarks/TPC-H/data/part.tbl' DELIMITER '|'
+\copy partsupp FROM '/home/irina/PG-Index-Advisor/benchmarks/TPC-H/data/partsupp.tbl' DELIMITER '|'
+\copy region FROM '/home/irina/PG-Index-Advisor/benchmarks/TPC-H/data/region.tbl' DELIMITER '|'
+\copy supplier FROM '/home/irina/PG-Index-Advisor/benchmarks/TPC-H/data/supplier.tbl' DELIMITER '|'

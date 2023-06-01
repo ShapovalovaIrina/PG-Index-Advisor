@@ -1,0 +1,65 @@
+{
+  "id": "TPC-H",
+  "description": "TPC-H benchmark",
+  "random_seed": 1000,
+  "logging": "verbose",
+  "max_steps_per_episode": 200,
+  "max_index_width": 2,
+  "result_path": "tpc_h_results",
+  "filter_utilized_columns": false,
+  "reenable_indexes": false,
+  "pickle_cost_estimation_caches": false,
+  "validation_frequency": 1000,
+  "timesteps": 20000,
+  "rl_algorithm": {
+    "algorithm": "PPO",
+    "gamma": 0.5,
+    "policy": "MlpPolicy",
+    "model_architecture": {
+      "net_arch": {
+        "vf": [256,256],
+        "pi": [256,256]
+      }
+    },
+    "args": {
+      "n_steps": 64
+    }
+  },
+  "database": {
+    "database": "tpcc",
+    "username": "postgres",
+    "password": "postgres",
+    "hostname": "localhost",
+    "port": 6543
+  },
+  "workload": {
+    "size": 19,
+    "varying_frequencies": true,
+    "training_instances": 20,
+    "validation_testing": {
+      "number_of_workloads": 5,
+      "unknown_query_probabilities": [0.0]
+    },
+    "excluded_query_classes": [2, 17, 20],
+    "similar_workloads": false
+  },
+  "workload_embedder": {
+    "representation_size": 40
+  },
+  "budgets": {
+    "training": false,
+    "validation_and_testing": [500, 1000, 1500, 2500, 3500, 5000, 6500, 8000, 10000]
+  },
+  "filters": {
+    "table": {
+      "TableNumRowsFilter": {
+        "threshold": 10000
+      }
+    },
+    "index": {
+      "IndexConstraintFilter": {
+        "skip_primary_key": true
+      }
+    }
+  }
+}

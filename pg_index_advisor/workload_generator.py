@@ -112,22 +112,27 @@ class WorkloadGenerator(object):
         return len(self.query_texts)
 
     def _retrieve_query_texts(self) -> List[List[str]]:
-        query_file = open(f"{self.QUERY_PATH}/query.txt", "r")
+        # TODO: configure query path
+        query_file = open(f"{self.QUERY_PATH}/tpc_h_queries.sql", "r")
 
         queries = {}
-        file_queries = query_file.readlines()
+        file_queries = query_file.read()
+
         query_file.close()
+
+        file_queries = file_queries.split(';')
 
         for query in file_queries:
             query = query.strip('\r\n')
-            query_fingerprint = fingerprint(query)
+            if query != '':
+                query_fingerprint = fingerprint(query)
 
-            if query_fingerprint in queries:
-                similar_queries = queries.get(query_fingerprint)
-                similar_queries.append(query)
-                queries[query_fingerprint] = similar_queries
-            else:
-                queries[query_fingerprint] = [query]
+                if query_fingerprint in queries:
+                    similar_queries = queries.get(query_fingerprint)
+                    similar_queries.append(query)
+                    queries[query_fingerprint] = similar_queries
+                else:
+                    queries[query_fingerprint] = [query]
 
         queries = list(queries.values())
 
@@ -172,7 +177,14 @@ class WorkloadGenerator(object):
 
         workloads = []
 
+        # count = 0
+
         for query_classes, query_class_frequencies in tuples:
+            # if count % 100 == 0:
+            #     print(f'generate {count} workloads from tuples')
+
+            # count += 1
+
             queries = []
 
             for query_class, frequency in zip(query_classes, query_class_frequencies):
@@ -196,7 +208,7 @@ class WorkloadGenerator(object):
 
         for column in self.schema_columns:
             full_column_name = f"{column.table}.{column.name}"
-            if full_column_name in query_columns:
+            if full_column_name in query_columns or column.name in query_columns:
                 query.columns.append(column)
 
     def _resolve_columns(self, query_parser):
@@ -234,6 +246,9 @@ class WorkloadGenerator(object):
         unique_workload_tuples = set()
 
         while required_unique_workloads > len(unique_workload_tuples):
+            # if len(unique_workload_tuples) % 1000 == 0:
+            #     print(f'generate {len(unique_workload_tuples)} workloads')
+
             workload_tuple = self._generate_random_workload(
                 query_classes_per_workload,
                 unknown_query_probability
@@ -256,8 +271,11 @@ class WorkloadGenerator(object):
         )
 
         validation_workloads = self._workloads_from_tuples(validation_workload_tuples, unknown_query_probability)
+        # print('generate validation_workloads')
         test_workloads = self._workloads_from_tuples(test_workload_tuples, unknown_query_probability)
+        # print('generate test_workloads')
         train_workloads = self._workloads_from_tuples(train_workload_tuples, unknown_query_probability)
+        # print('generate train_workloads')
 
         return train_workloads, validation_workloads, test_workloads
 

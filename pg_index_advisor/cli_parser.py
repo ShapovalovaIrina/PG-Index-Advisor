@@ -33,7 +33,10 @@ class CLIParser:
     def _add_parser_main_arguments(parser):
         config_file_help = \
             'Path to the configuration file'
-        parser.add_argument('-c', '--config-file', help=config_file_help, type=str, default='config/config.json',
+        parser.add_argument('-c', '--config-file',
+                            help=config_file_help,
+                            type=str,
+                            default='/home/irina/PG-Index-Advisor/config/tpch.json',
                             dest='config')
 
         width_help = \
