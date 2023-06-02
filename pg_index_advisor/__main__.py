@@ -25,7 +25,7 @@ def learn(config_file):
     model = MaskablePPO(
         policy=index_advisor.config["rl_algorithm"]["policy"],
         env=training_env,
-        verbose=2,
+        verbose=0,
         seed=index_advisor.config["random_seed"],
         gamma=index_advisor.config["rl_algorithm"]["gamma"],
         tensorboard_log="tensor_log",
@@ -60,8 +60,8 @@ def learn(config_file):
     index_advisor.write_report()
 
 
-def predict(config_file):
-    index_advisor = get_index_advisor(config_file)
+def predict(config_file, budget):
+    index_advisor = get_index_advisor(config_file, budget)
 
     env = get_env(index_advisor, EnvironmentType.VALIDATION)
 
@@ -70,6 +70,8 @@ def predict(config_file):
     vec_env = model.get_env()
     obs = vec_env.reset()
 
+    recommendations = []
+    total_recommendations_count = 0
     done = False
 
     while not done:
@@ -81,23 +83,31 @@ def predict(config_file):
         )
         obs, rewards, dones, info = vec_env.step(action)
 
-        columns = index_advisor.globally_indexable_columns_flat[action[0]]
+        total_recommendations_count += 1
         done = dones[0]
+        reward = rewards[0]
 
-        print(f"""
-        Action: {columns}.
-        Reward: {rewards[0]}.
-        Done: {done}.
-        """)
+        if reward > 0:
+            columns = index_advisor.globally_indexable_columns_flat[action[0]]
+            recommendations.append((columns, reward))
+
+    print(f"""
+    Get recommendations from env {len(recommendations)}/{total_recommendations_count}. \
+    Percent: {(len(recommendations) * 100 / total_recommendations_count):.2f}
+    """)
+    recommendations = sorted(recommendations, key=lambda r: r[1], reverse=True)
+
+    for (i, (columns, reward)) in enumerate(recommendations):
+        print(f"{i}) Action: {columns}. Reward: {reward:,.10f}")
 
 
-def get_index_advisor(config_file):
+def get_index_advisor(config_file, budget=None):
     """
     Parse configuration file and setup environment.
     """
     index_advisor = IndexAdvisor(config_file)
 
-    index_advisor.prepare()
+    index_advisor.prepare(budget)
 
     return index_advisor
 
@@ -139,6 +149,6 @@ if __name__ == "__main__":
 
     if action == 'learn':
         learn(config_file)
-    elif action == 'predict':
-        predict(config_file)
+    elif action == 'recommend':
+        predict(config_file, args.budget)
 

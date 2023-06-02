@@ -20,7 +20,8 @@ class ConfigurationParser(object):
             "budgets",
             "reenable_indexes",
             "validation_frequency",
-            "timesteps"
+            "timesteps",
+            "query_file"
         ]
 
         self.REQUIRED_CONFIGURATION_OPTIONS_FURTHER = {

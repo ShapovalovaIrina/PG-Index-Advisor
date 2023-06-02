@@ -1,15 +1,16 @@
 {
   "id": "TPC-H",
   "description": "TPC-H benchmark",
-  "random_seed": 1000,
-  "logging": "verbose",
+  "random_seed": 61,
+  "logging": "-",
   "max_steps_per_episode": 200,
   "max_index_width": 2,
   "result_path": "tpc_h_results",
+  "query_file": "/home/irina/PG-Index-Advisor/queries/tpc_h_queries.txt",
   "filter_utilized_columns": false,
   "reenable_indexes": false,
   "pickle_cost_estimation_caches": false,
-  "validation_frequency": 1000,
+  "validation_frequency": 2000,
   "timesteps": 20000,
   "rl_algorithm": {
     "algorithm": "PPO",
@@ -33,18 +34,18 @@
     "port": 6543
   },
   "workload": {
-    "size": 19,
+    "size": 16,
     "varying_frequencies": true,
-    "training_instances": 20,
+    "training_instances": 200,
     "validation_testing": {
       "number_of_workloads": 5,
       "unknown_query_probabilities": [0.0]
     },
-    "excluded_query_classes": [2, 17, 20],
+    "excluded_query_classes": [],
     "similar_workloads": false
   },
   "workload_embedder": {
-    "representation_size": 40
+    "representation_size": 30
   },
   "budgets": {
     "training": false,

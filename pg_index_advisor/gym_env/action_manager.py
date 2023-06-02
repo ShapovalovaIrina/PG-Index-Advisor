@@ -123,11 +123,14 @@ class MultiColumnIndexActionManager(object):
         self.combinations_to_delete = copy.copy(self.initial_combinations)
 
         self._valid_actions_based_on_initial_indexes()
+        logging.info('finish _valid_actions_based_on_initial_indexes')
         self._valid_actions_based_on_workload(workload)
+        logging.info('finish _valid_actions_based_on_workload')
         self._valid_actions_based_on_budget(
             budget,
             current_storage_consumption=initial_storage_consumption
         )
+        logging.info('finish _valid_actions_based_on_budget')
 
         return np.array(self.valid_actions)
     
@@ -249,7 +252,7 @@ class MultiColumnIndexActionManager(object):
 
         self._remaining_valid_actions = new_remaining_actions
 
-    def _valid_actions_based_on_last_action(self, action_idx):
+    def _valid_actions_based_on_last_action(self, action_idx, setup=False):
         """
         Update valid actions list based on the last action.
 
@@ -266,9 +269,9 @@ class MultiColumnIndexActionManager(object):
                 column_combination = self.indexable_column_combinations_flat[column_combination_idx]
                 possible_extended_column = column_combination[-1]
 
-                # action already applied by user, so unlock dependent actions
+                # TODO: понаблюдать, все ли окей
                 if self.valid_actions[column_combination_idx] == self.ALLOW_TO_DELETE:
-                    self._valid_actions_based_on_last_action(column_combination_idx)
+                #     self._valid_actions_based_on_last_action(column_combination_idx)
                     continue
 
                 # wl_indexable_columns - columns from workload

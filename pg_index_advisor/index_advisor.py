@@ -1,3 +1,4 @@
+import copy
 import gzip
 import json
 import logging
@@ -9,6 +10,7 @@ import subprocess
 import gym
 import numpy as np
 
+from pg_index_advisor import utils
 from pg_index_advisor.configuration_parser import ConfigurationParser
 from pg_index_advisor import utils
 from datetime import datetime, timedelta
@@ -70,7 +72,7 @@ class IndexAdvisor(object):
 
         self._init_time()
 
-    def prepare(self):
+    def prepare(self, budget=None):
         """
         Get filtered DB schema elements:
             - columns
@@ -89,10 +91,11 @@ class IndexAdvisor(object):
             db_config=self.schema.db_config,
             experiment_id=self.id,
             filter_utilized_columns=self.config["filter_utilized_columns"],
+            query_file=self.config["query_file"],
             logging_mode=self.config["logging"]
         )
 
-        self._assign_budgets_to_workloads()
+        self._assign_budgets_to_workloads(budget)
 
         self.globally_indexable_columns = self.workload_generator.globally_indexable_columns
 
@@ -228,20 +231,28 @@ class IndexAdvisor(object):
             os.mkdir(self.folder_path)
         else:
             logging.warning(
-                f"Experiment folder already exists at: {self.folder_path} - "
-                "terminating here because we don't want to overwrite anything."
+                f"Experiment folder already exists at: {self.folder_path}."
             )
 
-    def _assign_budgets_to_workloads(self):
+    def _assign_budgets_to_workloads(self, budget):
         # TODO: training budget?
+
+        budgets = self.config["budgets"]["validation_and_testing"]
+
+        def get_budget():
+            wl_budget = copy.copy(budget)
+
+            if wl_budget is None:
+                wl_budget = self.rnd.choice(budgets)
+            return wl_budget
 
         for workload_list in self.workload_generator.wl_testing:
             for workload in workload_list:
-                workload.budget = self.rnd.choice(self.config["budgets"]["validation_and_testing"])
+                workload.budget = get_budget()
 
         for workload_list in self.workload_generator.wl_validation:
             for workload in workload_list:
-                workload.budget = self.rnd.choice(self.config["budgets"]["validation_and_testing"])
+                workload.budget = get_budget()
 
     def get_callback(
             self,
@@ -416,11 +427,11 @@ class IndexAdvisor(object):
 
             f.write(
                 "        Final model:           " 
-                f"{final_avg(models['fm']['test']):.2f}\n"
+                f"{final_avg(models['fm']['test']):.5f}\n"
             )
             f.write(
                 "        Best model:            " 
-                f"{final_avg(models['bm']['test']):.2f}\n"
+                f"{final_avg(models['bm']['test']):.5f}\n"
             )
             # TODO: multi validation wl
             f.write("\n")
@@ -428,11 +439,11 @@ class IndexAdvisor(object):
             f.write("Overall Validation:\n")
             f.write(
                 "        Final model:           " 
-                f"{final_avg(models['fm']['vali']):.2f}\n"
+                f"{final_avg(models['fm']['vali']):.5f}\n"
             )
             f.write(
                 "        Best model:            " 
-                f"{final_avg(models['bm']['vali']):.2f}\n"
+                f"{final_avg(models['bm']['vali']):.5f}\n"
             )
             # TODO: multi validation
             f.write("\n")

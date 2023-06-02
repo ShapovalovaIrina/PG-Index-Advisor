@@ -152,3 +152,6 @@ class CLIParser:
     @staticmethod
     def _add_recommend_action_to_parser(subparsers):
         parser_r = subparsers.add_parser('recommend', help='Help for recommendation action')
+
+        budget_help = 'Storage budget.'
+        parser_r.add_argument('-b', '--budget', help=budget_help, type=int, required=True)

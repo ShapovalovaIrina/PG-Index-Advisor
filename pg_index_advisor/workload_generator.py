@@ -11,9 +11,6 @@ from pglast import fingerprint
 from pg_index_advisor.schema.structures import Query, Workload
 
 
-QUERY_PATH = "query_examples"
-
-
 class WorkloadGenerator(object):
     def __init__(self,
                  workload_config,
@@ -23,6 +20,7 @@ class WorkloadGenerator(object):
                  random_seed,
                  experiment_id,
                  filter_utilized_columns,
+                 query_file,
                  logging_mode
                  ):
         self._init_parameters(
@@ -33,6 +31,7 @@ class WorkloadGenerator(object):
             random_seed,
             experiment_id,
             filter_utilized_columns,
+            query_file,
             logging_mode
         )
 
@@ -89,6 +88,7 @@ class WorkloadGenerator(object):
             random_seed,
             experiment_id,
             filter_utilized_columns,
+            query_file,
             logging_mode
     ):
         self.experiment_id = experiment_id
@@ -106,14 +106,13 @@ class WorkloadGenerator(object):
         self.excluded_query_classes = set()  # Empty set
         self.varying_frequencies = workload_config["varying_frequencies"]
 
-        self.QUERY_PATH = QUERY_PATH
+        self.query_file = query_file
 
     def _set_number_of_query_classes(self):
         return len(self.query_texts)
 
     def _retrieve_query_texts(self) -> List[List[str]]:
-        # TODO: configure query path
-        query_file = open(f"{self.QUERY_PATH}/tpc_h_queries.sql", "r")
+        query_file = open(self.query_file, "r")
 
         queries = {}
         file_queries = query_file.read()
@@ -123,7 +122,14 @@ class WorkloadGenerator(object):
         file_queries = file_queries.split(';')
 
         for query in file_queries:
-            query = query.strip('\r\n')
+            query = query\
+                .strip('\r\n')\
+                .strip('\n')\
+                .strip()\
+                .replace("limit 100", "")\
+                .replace("limit 20", "")\
+                .replace("limit 10", "")
+
             if query != '':
                 query_fingerprint = fingerprint(query)
 

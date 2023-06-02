@@ -2,19 +2,20 @@ import collections
 import json
 import logging
 import copy
+
 import gym
 import random
 import numpy as np
 
 from typing import List, Set
 
-from .common import EnvironmentType, IndexType
-from .action_manager import MultiColumnIndexActionManager as ActionManager
-from .observation_manager import SingleColumnIndexPlanEmbeddingObservationManagerWithCost as ObservationManager
-from .reward_manager import CostAndStorageRewardManager as RewardManager
+from pg_index_advisor.gym_env.common import EnvironmentType, IndexType
+from pg_index_advisor.gym_env.action_manager import MultiColumnIndexActionManager as ActionManager
+from pg_index_advisor.gym_env.observation_manager import SingleColumnIndexPlanEmbeddingObservationManagerWithCost as ObservationManager
+from pg_index_advisor.gym_env.reward_manager import CostAndStorageRewardManager as RewardManager
 from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector as DatabaseConnector
-from pg_index_advisor.utils import index_from_column_combination, remove_if_exists
-from pg_index_advisor.schema.structures import RealIndex, PotentialIndex
+from pg_index_advisor.utils import remove_if_exists
+from pg_index_advisor.schema.structures import PotentialIndex
 from pg_index_advisor.schema.cost_evaluation import CostEvaluationWithHidingIndex as CostEvaluation
 from index_selection_evaluation.selection.utils import b_to_mb
 from index_selection_evaluation.selection.workload import Workload
@@ -71,6 +72,11 @@ class PGIndexAdvisorEnv(gym.Env):
         self.observation_space = self.observation_manager.get_observation_space()
 
         self.reward_manager = config["reward_manager"]
+
+        self.allowed_actions = [
+            self.action_manager.ALLOW_TO_CREATE,
+            self.action_manager.ALLOW_TO_DELETE
+        ]
 
         self._get_initial_observation()
 
@@ -194,11 +200,7 @@ class PGIndexAdvisorEnv(gym.Env):
         return old_index_size, index_type
 
     def valid_action_mask(self):
-        allowed_actions = [
-            self.action_manager.ALLOW_TO_CREATE,
-            self.action_manager.ALLOW_TO_DELETE
-        ]
-        return [action in allowed_actions for action in self.action_manager.valid_actions]
+        return [action in self.allowed_actions for action in self.action_manager.valid_actions]
 
     def _step_asserts(self, action):
         assert self.action_space.contains(action), f"{action} ({type(action)}) invalid"
@@ -386,8 +388,14 @@ class PGIndexAdvisorEnv(gym.Env):
         return {"action_mask": self.valid_actions}
 
     def _get_env_state_for_debug(self):
+        valid_indexes = []
+
+        for idx, action in enumerate(self.valid_actions):
+            if action in self.allowed_actions:
+                valid_indexes.append(self.globally_indexable_columns[idx])
+
         return {
-            'Valid actions': ', '.join(map(str, self.valid_actions)),
+            'Valid actions': ', '.join(map(str, valid_indexes)),
             'Current created indexes': ', '.join(map(str, self.current_created_indexes)),
             'Current undeleted indexes': ', '.join(map(str, self.current_indexes_to_delete)),
             'Initial undeleted indexes': ', '.join(map(str, self.action_manager.initial_indexes))
@@ -418,7 +426,7 @@ class PGIndexAdvisorEnv(gym.Env):
             f"{self.current_created_indexes}\n    "
         )
         logging.warning(output)
-        print(self.environment_type)
+
         self.episode_performances.append(episode_performance)
 
     def render(self, mode="human"):

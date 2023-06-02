@@ -56,9 +56,9 @@ class TestWorkloadGenerator(unittest.TestCase):
             random_seed,
             1,
             False,
+            'resources/query.txt',
             False
         )
-        self.workload_generator.QUERY_PATH = 'resources'
 
     def test_retrieve_query_texts(self):
         queries = self.workload_generator._retrieve_query_texts()

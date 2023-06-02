@@ -30,12 +30,13 @@ class CostAndStorageRewardManager(RewardManager):
     def __init__(self):
         RewardManager.__init__(self)
 
-        self.SCALER = 1
+        self.SCALER = 100
 
     def _calculate_reward(self, current_cost, previous_cost, initial_cost, new_index_size):
         assert abs(new_index_size) > 0
 
-        reward = ((previous_cost - current_cost) / initial_cost) / b_to_mb(new_index_size) * self.SCALER
+        reward = ((previous_cost - current_cost) / initial_cost) \
+                 / b_to_mb(abs(new_index_size)) * self.SCALER
 
         return reward
 

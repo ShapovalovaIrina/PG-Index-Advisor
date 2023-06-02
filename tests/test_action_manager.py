@@ -120,7 +120,7 @@ class TestActionManager(unittest.TestCase):
         valid_actions[3] = ALLOW_TO_DELETE # (id, status)
         valid_actions[4] = ALLOW_TO_CREATE # (id, type)
 
-        self.assertEqual(action_manager.valid_actions, valid_actions)
+        self.assertEqual(valid_actions, action_manager.valid_actions)
         self.assertEqual(sorted(action_manager._remaining_valid_actions), [0, 1, 2, 3, 4])
 
 
