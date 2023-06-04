@@ -33,6 +33,8 @@ from pg_index_advisor.gym_env.observation_manager import SingleColumnIndexPlanEm
 from pg_index_advisor.gym_env.reward_manager import CostAndStorageRewardManager as RewardManager
 from pg_index_advisor.gym_env.env import PGIndexAdvisorEnv
 
+from index_selection_evaluation.selection.utils import b_to_mb
+
 
 def mask_fn(env: PGIndexAdvisorEnv) -> List[bool]:
     return env.valid_action_mask()
@@ -56,7 +58,6 @@ class IndexAdvisor(object):
         self.number_of_features = None
         self.number_of_actions = None
         self.workload_embedder = None
-        self.evaluated_workloads_strs = []
         self.globally_indexable_columns = []
         self.single_column_flat_set = set()
         self.globally_indexable_columns_flat = []
@@ -239,20 +240,24 @@ class IndexAdvisor(object):
 
         budgets = self.config["budgets"]["validation_and_testing"]
 
-        def get_budget():
+        def get_budget(i):
             wl_budget = copy.copy(budget)
 
             if wl_budget is None:
-                wl_budget = self.rnd.choice(budgets)
+                i = min(i, len(budgets))
+                wl_budget = budgets[i]
+
+            # if wl_budget is None:
+            #     wl_budget = self.rnd.choice(budgets)
             return wl_budget
 
         for workload_list in self.workload_generator.wl_testing:
-            for workload in workload_list:
-                workload.budget = get_budget()
+            for (i, workload) in enumerate(workload_list):
+                workload.budget = get_budget(i)
 
         for workload_list in self.workload_generator.wl_validation:
-            for workload in workload_list:
-                workload.budget = get_budget()
+            for (i, workload) in enumerate(workload_list):
+                workload.budget = get_budget(i)
 
     def get_callback(
             self,
@@ -281,6 +286,9 @@ class IndexAdvisor(object):
         return callback
 
     def finish_learning(self, training_env: VecNormalize, parallel_environments=1):
+        self.moving_average_validation_model_at_step = None
+        self.best_mean_model_step = None
+
         self.model.save(f"{self.folder_path}/final_model")
         training_env.save(f"{self.folder_path}/training_env_vec_normalize.pkl")
 
@@ -313,7 +321,7 @@ class IndexAdvisor(object):
             with gzip.open(f"{self.folder_path}/caches.pickle.gzip", "wb") as handle:
                 pickle.dump(combined_caches, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def write_report(self):
+    def write_report(self, filename=None):
         self.end_time = datetime.now()
 
         self.model.training = False
@@ -344,12 +352,14 @@ class IndexAdvisor(object):
             }
         }
 
-        self._write_report(models)
+        if filename is None:
+            filename = f"{self.folder_path}/report_ID_{self.id}.txt"
+        self._write_report(models, filename)
 
         logging.critical(
             (
                 f"Finished training of ID {self.id}. Report can be found at "
-                f"./{self.folder_path}/report_ID_{self.id}.txt"
+                f"./{filename}"
             )
         )
 
@@ -395,16 +405,17 @@ class IndexAdvisor(object):
 
         return episode_performances, mean_performance, perfs
 
-    def _write_report(self, models):
-        probabilities = len(self.config["workload"]["validation_testing"]["unknown_query_probabilities"])
+    def _write_report(self, models, filename=None):
+        probabilities = self.config["workload"]["validation_testing"]["unknown_query_probabilities"]
+        probabilities_len = len(probabilities)
 
         def final_avg(values):
             val = 0
             for res in values:
                 val += res[1]
-            return val / probabilities
+            return val / probabilities_len
 
-        with open(f"{self.folder_path}/report_ID_{self.id}.txt", "w") as f:
+        with open(filename, "w") as f:
             f.write(f"##### Report for Experiment with ID: {self.id} #####\n")
             f.write(f"Description: {self.config['description']}\n")
             f.write("\n")
@@ -422,6 +433,97 @@ class IndexAdvisor(object):
             f.write("\n")
 
             # TODO: unknown queries
+
+            for idx, unknown_query_probability in enumerate(probabilities):
+                f.write(f"Unknown query probability: {unknown_query_probability}:\n")
+                f.write("    Final mean performance test:\n")
+
+                # Final model
+                test_fm_perfs, self.performance_test_final_model, self.test_fm_details = models['fm']['test'][idx]
+                vali_fm_perfs, self.performance_vali_final_model, self.vali_fm_details = models['fm']['vali'][idx]
+
+                # Best model
+                test_bm_perfs, self.performance_test_best_mean_reward_model, self.test_bm_details = models['bm']['test'][idx]
+                vali_bm_perfs, self.performance_vali_best_mean_reward_model, self.vali_bm_details = models['bm']['vali'][idx]
+
+
+                self.test_fm_wl_budgets = self._get_wl_budgets_from_model_perfs(test_fm_perfs)
+                self.vali_fm_wl_budgets = self._get_wl_budgets_from_model_perfs(vali_fm_perfs)
+
+                self.test_fm_wl_consumption = self._get_wl_consumption_from_model_perfs(test_fm_perfs)
+                self.vali_fm_wl_consumption = self._get_wl_consumption_from_model_perfs(vali_fm_perfs)
+
+                self.test_bm_wl_consumption = self._get_wl_consumption_from_model_perfs(test_bm_perfs)
+                self.vali_bm_wl_consumption = self._get_wl_consumption_from_model_perfs(vali_bm_perfs)
+
+                f.write(
+                    (
+                        "        Final model:                         "
+                        f"{self.performance_test_final_model:.2f} ({self.test_fm_details})\n"
+                    )
+                )
+                f.write(
+                    (
+                        "        Best mean reward model:              "
+                        f"{self.performance_test_best_mean_reward_model:.2f} ({self.test_bm_details})\n"
+                    )
+                )
+
+                f.write("\n")
+
+                f.write(
+                    (
+                        "        Final model reward:                  "
+                        f"{self.test_fm_wl_consumption}\n"
+                    )
+                )
+                f.write(
+                    (
+                        "        Best mean reward model reward:       "
+                        f"{self.test_bm_wl_consumption}\n"
+                    )
+                )
+
+                f.write("\n")
+                f.write(f"        Budgets:                            "
+                        f"{self.test_fm_wl_budgets}\n")
+
+                f.write("\n")
+                f.write("    Final mean performance validation:\n")
+                f.write(
+                    (
+                        "        Final model:                         "
+                        f"{self.performance_vali_final_model:.2f} ({self.vali_fm_details})\n"
+                    )
+                )
+                f.write(
+                    (
+                        "        Best mean reward model:              "
+                        f"{self.performance_vali_best_mean_reward_model:.2f} ({self.vali_bm_details})\n"
+                    )
+                )
+
+                f.write("\n")
+
+                f.write(
+                    (
+                        "        Final model reward:                  "
+                        f"{self.vali_fm_wl_consumption}\n"
+                    )
+                )
+                f.write(
+                    (
+                        "        Best mean reward model reward:       "
+                        f"{self.vali_bm_wl_consumption}\n"
+                    )
+                )
+
+                f.write("\n")
+                f.write(f"        Budgets:                            "
+                        f"{self.vali_fm_wl_budgets}\n")
+
+                f.write("\n")
+                f.write("\n")
 
             f.write("Overall Test:\n")
 
@@ -466,13 +568,19 @@ class IndexAdvisor(object):
             f.write("Used configuration:\n")
             json.dump(self.config, f)
             f.write("\n\n")
-            f.write("Evaluated test workloads:\n")
-            for evaluated_workload in self.evaluated_workloads_strs[: (len(self.evaluated_workloads_strs) // 2)]:
-                f.write(f"{evaluated_workload}\n")
-            f.write("Evaluated validation workloads:\n")
-            # fmt: off
-            for evaluated_workload in self.evaluated_workloads_strs[(len(self.evaluated_workloads_strs) // 2) :]:  # noqa: E203, E501
-                f.write(f"{evaluated_workload}\n")
-            # fmt: on
-            f.write("\n\n")
+
+    @staticmethod
+    def _get_wl_budgets_from_model_perfs(perfs):
+        wl_budgets = []
+        for perf in perfs:
+            assert perf["evaluated_workload"].budget == perf["available_budget"], "Budget mismatch!"
+            wl_budgets.append(perf["evaluated_workload"].budget)
+        return wl_budgets
+
+    @staticmethod
+    def _get_wl_consumption_from_model_perfs(perfs):
+        wl_consumption = []
+        for perf in perfs:
+            wl_consumption.append(f"{perf['reward']:.6f}")
+        return wl_consumption
 

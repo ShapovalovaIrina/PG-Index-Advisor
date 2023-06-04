@@ -26,6 +26,7 @@ class CLIParser:
         subparsers = parser.add_subparsers(help='Action help', dest='action')
         self._add_learn_action_to_parser(subparsers)
         self._add_recommend_action_to_parser(subparsers)
+        self._add_report_action_to_parser(subparsers)
 
         return parser
 
@@ -155,3 +156,13 @@ class CLIParser:
 
         budget_help = 'Storage budget.'
         parser_r.add_argument('-b', '--budget', help=budget_help, type=int, required=True)
+
+    @staticmethod
+    def _add_report_action_to_parser(subparsers):
+        parser_r = subparsers.add_parser('report', help='Help for report action')
+
+        budget_help = 'Storage budget.'
+        parser_r.add_argument('-b', '--bugdet', help=budget_help, type=int, required=True)
+
+        result_path_help = 'Result path.'
+        parser_r.add_argument('-p', '--path', help=result_path_help, type=str, required=True)

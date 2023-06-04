@@ -1,0 +1,1 @@
+SELECT v0."count", v0."age", v0."review_status" FROM "vehicle_request_stats_view" AS v0;

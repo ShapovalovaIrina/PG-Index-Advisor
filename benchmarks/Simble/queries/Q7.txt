@@ -1,0 +1,28 @@
+SELECT p0."id",
+       p0."version",
+       p0."previous",
+       p0."user_prepared_details",
+       p0."processed_user_prepared_details",
+       p0."prepared_details",
+       p0."type",
+       p0."status",
+       p0."submitted_at",
+       p0."prepared_at",
+       p0."submitted_by",
+       p0."vehicle_id",
+       p0."channel_version_id",
+       p0."inserted_at",
+       p0."updated_at"
+FROM "profile_application" AS p0
+         LEFT OUTER JOIN "profiles" AS p1 ON p1."user_id" = p0."submitted_by"
+         INNER JOIN (SELECT sp0."submitted_by" AS "key", min(sp0."version") AS "version"
+                     FROM "profile_application" AS sp0
+                              LEFT OUTER JOIN "user_application_company_response" AS su1
+                                              ON (su1."application_id" = sp0."id") AND (su1."company_id" = 1)
+                     WHERE ((sp0."status" = 'submitted') AND (su1 IS NULL))
+                     GROUP BY sp0."submitted_by") AS s2
+                    ON (p0."submitted_by" = s2."key") AND (p0."version" = s2."version")
+WHERE (p1."deleted" = False)
+  AND (p0."channel_version_id" = ANY (ARRAY[1,10,15]))
+ORDER BY p0."submitted_at" DESC NULLS LAST, p0."inserted_at" DESC
+LIMIT 10 OFFSET 0;

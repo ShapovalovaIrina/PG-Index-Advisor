@@ -1,5 +1,6 @@
 import logging
 import copy
+import os
 
 import pg_index_advisor.cli_parser
 
@@ -101,6 +102,28 @@ def predict(config_file, budget):
         print(f"{i}) Action: {columns}. Reward: {reward:,.10f}")
 
 
+def report(config_file, result_path, budget):
+    index_advisor = get_index_advisor(config_file, budget)
+
+    if os.path.exists(result_path):
+        assert os.path.isdir(result_path), \
+            f"Folder for results report must be a folder, not a file: {result_path}"
+    else:
+        os.makedirs(result_path)
+
+    filename_path = f"{result_path}/validation_result_{budget}.txt"
+
+    env = get_env(index_advisor, EnvironmentType.VALIDATION)
+
+    model = MaskablePPO.load(f"{index_advisor.folder_path}/final_model.zip", env=env)
+    index_advisor.set_model(model)
+
+    index_advisor.start_learning_time()
+    index_advisor.finish_learning_time()
+
+    index_advisor.write_report(filename=filename_path)
+
+
 def get_index_advisor(config_file, budget=None):
     """
     Parse configuration file and setup environment.
@@ -151,4 +174,5 @@ if __name__ == "__main__":
         learn(config_file)
     elif action == 'recommend':
         predict(config_file, args.budget)
-
+    elif action == 'report':
+        report(config_file, args.path, args.bugdet)

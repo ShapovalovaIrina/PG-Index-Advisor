@@ -1,0 +1,60 @@
+SELECT t0."id",
+       t0."upload_trip_id",
+       t0."upload_parts_count",
+       t0."owner_id",
+       t0."policy_id",
+       t0."inserted_at",
+       t0."updated_at"
+FROM "trips" AS t0
+WHERE (t0."policy_id" = 347284)
+ORDER BY t0."inserted_at" DESC;
+SELECT t0."id",
+       t0."upload_trip_id",
+       t0."upload_parts_count",
+       t0."owner_id",
+       t0."policy_id",
+       t0."inserted_at",
+       t0."updated_at"
+FROM "trips" AS t0
+WHERE (t0."policy_id" = 82984)
+ORDER BY t0."inserted_at" DESC;
+SELECT t0."id",
+       t0."upload_trip_id",
+       t0."upload_parts_count",
+       t0."owner_id",
+       t0."policy_id",
+       t0."inserted_at",
+       t0."updated_at"
+FROM "trips" AS t0
+WHERE (t0."policy_id" = 1643)
+ORDER BY t0."inserted_at" DESC;
+SELECT t0."id",
+       t0."upload_trip_id",
+       t0."upload_parts_count",
+       t0."owner_id",
+       t0."policy_id",
+       t0."inserted_at",
+       t0."updated_at"
+FROM "trips" AS t0
+WHERE (t0."policy_id" = 15000)
+ORDER BY t0."inserted_at" DESC;
+SELECT t0."id",
+       t0."upload_trip_id",
+       t0."upload_parts_count",
+       t0."owner_id",
+       t0."policy_id",
+       t0."inserted_at",
+       t0."updated_at"
+FROM "trips" AS t0
+WHERE (t0."policy_id" = 14)
+ORDER BY t0."inserted_at" DESC;
+SELECT t0."id",
+       t0."upload_trip_id",
+       t0."upload_parts_count",
+       t0."owner_id",
+       t0."policy_id",
+       t0."inserted_at",
+       t0."updated_at"
+FROM "trips" AS t0
+WHERE (t0."policy_id" = 408863)
+ORDER BY t0."inserted_at" DESC;

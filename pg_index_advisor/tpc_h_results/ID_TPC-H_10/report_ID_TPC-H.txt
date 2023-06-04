@@ -1,0 +1,46 @@
+##### Report for Experiment with ID: TPC-H #####
+Description: TPC-H benchmark
+
+Start:                         2023-06-03 01:22:12.864293
+End:                           2023-06-03 01:26:56.082379
+Duration:                      0:04:43.218086
+
+Start Training:                2023-06-03 01:22:31.915274
+End Training:                  2023-06-03 01:26:56.048194
+Duration Training:             0:04:24.132920
+Git Hash:                      b'81665d6373f8d94eeaf6edbc1957d2eded092832\n'
+Number of features:            555
+Number of actions:             365
+
+Unknown query probability: 0.0:
+    Final mean performance test:
+        Final model:               58.78 ([59.49, 49.36, 59.9, 71.2, 53.94])
+        Best mean reward model:    58.87 ([59.48, 49.04, 60.07, 71.23, 54.52])
+
+        Budgets:                   [8000, 1500, 10000, 2500, 5000]
+
+    Final mean performance validation:
+        Final model:               60.41 ([63.91, 58.73, 60.07, 57.22, 62.12])
+        Best mean reward model:    59.39 ([58.51, 58.98, 60.08, 57.18, 62.18])
+
+        Budgets:                   [3500, 5000, 500, 8000, 5000]
+
+
+Overall Test:
+        Final model:           58.77800
+        Best model:            58.86800
+
+Overall Validation:
+        Final model:           60.41000
+        Best model:            59.38600
+
+
+Evaluated episodes:            257
+Total steps taken:             19968
+CostEval cache hit ratio:      80.84 (262430 of 324640)
+Cost eval time (% of total):   0:02:29.711768 (56.68%)
+
+
+Used configuration:
+{"id": "TPC-H", "description": "TPC-H benchmark", "random_seed": 61, "logging": "-", "max_steps_per_episode": 200, "max_index_width": 2, "result_path": "tpc_h_results", "query_file": "/home/irina/PG-Index-Advisor/queries/tpc_h_queries.txt", "filter_utilized_columns": false, "reenable_indexes": false, "pickle_cost_estimation_caches": false, "validation_frequency": 2000, "timesteps": 20000, "rl_algorithm": {"algorithm": "PPO", "gamma": 0.5, "policy": "MlpPolicy", "model_architecture": {"net_arch": {"vf": [256, 256], "pi": [256, 256]}}, "args": {"n_steps": 64}}, "database": {"database": "tpcc", "username": "postgres", "password": "postgres", "hostname": "localhost", "port": 6543}, "workload": {"size": 16, "varying_frequencies": true, "training_instances": 200, "validation_testing": {"number_of_workloads": 5, "unknown_query_probabilities": [0.0]}, "excluded_query_classes": [], "similar_workloads": false}, "workload_embedder": {"representation_size": 30}, "budgets": {"training": false, "validation_and_testing": [500, 1000, 1500, 2500, 3500, 5000, 6500, 8000, 10000]}, "filters": {"table": {"TableNumRowsFilter": {"threshold": 10000}}, "index": {"IndexConstraintFilter": {"skip_primary_key": true}}}}
+

@@ -1,0 +1,5 @@
+UPDATE "policies" AS p0
+SET "policy_status" = 'inactive'
+FROM "trips" AS t1
+WHERE (t1."policy_id" = p0."policy_id")
+  AND ((p0."policy_status" = 'active') AND (p0."offer" ->> 'policy_type' = 'ride' OR p0."offer" ->> 'policy_type' = 'combo'));

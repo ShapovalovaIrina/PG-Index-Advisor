@@ -96,6 +96,26 @@ class PGIndexAdvisorEnv(gym.Env):
     def step(self, action_idx):
         logging.info(f"Take action: {self._action_idx_to_str(action_idx)}")
 
+        if self.valid_actions[action_idx] == self.action_manager.FORBIDDEN_ACTION:
+            logging.error(
+                f"Agent has chosen invalid action: {action_idx} "
+                f"({self._action_idx_to_str(action_idx)}."
+            )
+
+            environment_state = self._get_env_state_for_forbidden_action()
+
+            current_observation = self.observation_manager.get_observation(environment_state)
+
+            reward = self.reward_manager.calculate_reward(environment_state)
+
+            # Terminate episode because of the error
+            episode_done = True
+
+            info = self._get_info()
+            info['action'] = self._action_idx_to_str(action_idx)
+
+            return current_observation, reward, episode_done, info
+
         self._step_asserts(action_idx)
 
         self.steps_taken += 1
@@ -127,6 +147,7 @@ class PGIndexAdvisorEnv(gym.Env):
             self.current_workload_idx += 1
 
         info = self._get_info()
+        info['action'] = self._action_idx_to_str(action_idx)
 
         return current_observation, reward, episode_done, info
 
@@ -210,7 +231,7 @@ class PGIndexAdvisorEnv(gym.Env):
             self.valid_actions[action] == self.action_manager.ALLOW_TO_DELETE
         ), f"""
         Agent has chosen invalid action: {action} ({self._action_idx_to_str(action)}.
-        
+
         State:
         {json.dumps(self._get_env_state_for_debug(), indent=2)}
         )"""
@@ -275,9 +296,9 @@ class PGIndexAdvisorEnv(gym.Env):
 
     def _action_idx_to_str(self, action_idx):
         action_str = {
-            self.action_manager.ALLOW_TO_CREATE: 'create',
-            self.action_manager.ALLOW_TO_DELETE: 'delete',
-            self.action_manager.FORBIDDEN_ACTION: 'forbid'
+            self.action_manager.ALLOW_TO_CREATE: 'ALLOW_TO_CREATE',
+            self.action_manager.ALLOW_TO_DELETE: 'ALLOW_TO_DELETE',
+            self.action_manager.FORBIDDEN_ACTION: 'FORBIDDEN_ACTION'
         }
         return f'{action_str[self.valid_actions[action_idx]]} {self.globally_indexable_columns[action_idx]}'
 
@@ -355,6 +376,30 @@ class PGIndexAdvisorEnv(gym.Env):
 
         return environment_state
 
+    def _get_env_state_for_forbidden_action(self):
+        total_costs, plans_per_query, costs_per_query = \
+            self.cost_evaluation.calculate_cost_and_plans(
+                self.current_workload,
+                self.current_created_indexes,
+                store_size=True
+            )
+
+        self.previous_cost = self.current_costs
+        self.previous_storage_consumption = self.current_storage_consumption
+
+        self.current_costs = total_costs
+        self.current_storage_consumption = self.current_storage_consumption
+
+        new_index_relative_size = 1
+
+        environment_state = self._get_env_state_dict(
+            plans_per_query,
+            costs_per_query,
+            new_index_relative_size
+        )
+
+        return environment_state
+
     def _get_init_env_state(self):
         self.cost_evaluation.reset_hypopg()
 
@@ -392,7 +437,8 @@ class PGIndexAdvisorEnv(gym.Env):
 
         for idx, action in enumerate(self.valid_actions):
             if action in self.allowed_actions:
-                valid_indexes.append(self.globally_indexable_columns[idx])
+                valid_indexes.append(idx)
+                # valid_indexes.append(self.globally_indexable_columns[idx])
 
         return {
             'Valid actions': ', '.join(map(str, valid_indexes)),
@@ -416,6 +462,7 @@ class PGIndexAdvisorEnv(gym.Env):
             "available_budget": self.current_budget,
             "evaluated_workload": self.current_workload,
             "indexes": self.current_created_indexes,
+            "reward": self.reward_manager.accumulated_reward
         }
 
         output = (

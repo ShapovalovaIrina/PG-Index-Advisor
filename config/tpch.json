@@ -1,7 +1,7 @@
 {
   "id": "TPC-H",
   "description": "TPC-H benchmark",
-  "random_seed": 61,
+  "random_seed": 65,
   "logging": "-",
   "max_steps_per_episode": 200,
   "max_index_width": 2,
@@ -11,7 +11,7 @@
   "reenable_indexes": false,
   "pickle_cost_estimation_caches": false,
   "validation_frequency": 2000,
-  "timesteps": 20000,
+  "timesteps": 50000,
   "rl_algorithm": {
     "algorithm": "PPO",
     "gamma": 0.5,
@@ -38,7 +38,7 @@
     "varying_frequencies": true,
     "training_instances": 200,
     "validation_testing": {
-      "number_of_workloads": 5,
+      "number_of_workloads": 9,
       "unknown_query_probabilities": [0.0]
     },
     "excluded_query_classes": [],
