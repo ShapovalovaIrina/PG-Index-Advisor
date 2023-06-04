@@ -1,0 +1,108 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+skinparam responseMessageBelowArrow true
+
+participant Env
+participant ActionManager
+participant ObservationManager
+participant RewardManager
+
+activate Env
+
+create CostEvaluation
+Env -> CostEvaluation : create
+activate CostEvaluation
+CostEvaluation -> Env : ok
+deactivate CostEvaluation
+
+Env -> ActionManager : get_action_space()
+activate ActionManager
+ActionManager -> Env : action_space
+deactivate ActionManager
+
+Env -> ObservationManager : get_observation_space()
+activate ObservationManager
+ObservationManager -> Env : observation_space
+deactivate ObservationManager
+
+
+group get_initial_observation
+    Env -> Env : init:\n- current_created_indexes\n- current_deleted_indexes
+    Env -> Env : init\ncurrent_storage_consumption
+
+    Env -> RewardManager : reset()
+    activate RewardManager
+    RewardManager -> Env : ok
+    deactivate RewardManager
+
+    Env -> ActionManager : get_initial_valid_actions()
+    activate ActionManager
+    ActionManager -> Env : valid_actions
+    deactivate ActionManager
+
+    Env -> CostEvaluation : calculate_cost_and_plans(workload, current_indexes)
+    activate CostEvaluation
+    CostEvaluation -> Env : total_costs, plans_per_query, costs_per_query
+    deactivate CostEvaluation
+
+    Env -> Env : get_env_state()
+
+    Env -> ObservationManager : init_episode()
+    activate ObservationManager
+    ObservationManager -> Env : ok
+    deactivate ObservationManager
+
+    Env -> ObservationManager : get_observation(env_state)
+    activate ObservationManager
+    ObservationManager -> Env : initial_observation
+    deactivate ObservationManager
+end
+
+loop Количество эпизодов
+    group reset()
+        Env -> Env : get_initial_observation()
+    end
+
+    loop Количество шагов
+        group step()
+            alt Создать индекс
+                Env -> CostEvaluation : create_index()
+                activate CostEvaluation
+                CostEvaluation -> Env : ok
+                deactivate CostEvaluation
+            else Удалить индекс
+                Env -> CostEvaluation : delete_index()
+                activate CostEvaluation
+                CostEvaluation -> Env : ok
+                deactivate CostEvaluation
+            end
+        end
+
+        Env -> CostEvaluation : calculate_cost_and_plans(workload, current_indexes)
+        activate CostEvaluation
+        CostEvaluation -> Env : total_costs, plans_per_query, costs_per_query
+        deactivate CostEvaluation
+
+        Env -> Env : get_env_state()
+
+        Env -> ObservationManager : get_observation(env_state)
+        activate ObservationManager
+        ObservationManager -> Env : current_observation
+        deactivate ObservationManager
+
+        Env -> ActionManager : update_valid_actions()
+        activate ActionManager
+        ActionManager -> Env : valid_actions
+        deactivate ActionManager
+
+        Env -> RewardManager : calculate_reward(env_state)
+        activate RewardManager
+        RewardManager -> Env : reward
+        deactivate RewardManager
+    end
+end
+
+deactivate Env
+
+@enduml

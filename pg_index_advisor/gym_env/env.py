@@ -46,14 +46,14 @@ class PGIndexAdvisorEnv(gym.Env):
         self.total_number_of_steps = 0
 
         db_config = config["database"]
-        self.connector = DatabaseConnector(
+        connector = DatabaseConnector(
             db_config["database"],
             db_config["username"],
             db_config["password"],
             db_port=db_config["port"],
             autocommit=True
         )
-        self.cost_evaluation = CostEvaluation(self.connector)
+        self.cost_evaluation = CostEvaluation(connector)
 
         self.globally_indexable_columns = config["globally_indexable_columns"]
         # In certain cases, workloads are consumed: therefore, we need copy

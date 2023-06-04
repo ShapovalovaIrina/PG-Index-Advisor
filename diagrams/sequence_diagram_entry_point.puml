@@ -1,0 +1,98 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+skinparam responseMessageBelowArrow true
+
+participant Main
+
+activate Main
+
+create IndexAdvisor
+activate IndexAdvisor
+Main -> IndexAdvisor : create
+deactivate IndexAdvisor
+
+Main -> IndexAdvisor : prepare()
+activate IndexAdvisor
+
+create Schema
+
+IndexAdvisor -> Schema : create
+activate Schema
+Schema -> IndexAdvisor : объекты схемы
+deactivate Schema
+
+create WorkloadGenerator
+IndexAdvisor -> WorkloadGenerator : create
+activate WorkloadGenerator
+
+create QueryStorage
+WorkloadGenerator -> QueryStorage :create
+activate QueryStorage
+QueryStorage -> WorkloadGenerator : список запросов
+deactivate QueryStorage
+WorkloadGenerator -> IndexAdvisor : нагрузка, список атрибутов \nдля индексирования
+deactivate WorkloadGenerator
+
+IndexAdvisor -> IndexAdvisor : перестановки атрибутов \nW_max
+
+IndexAdvisor -> IndexAdvisor : оценка размеров индексов
+
+IndexAdvisor -> Main : ok
+deactivate IndexAdvisor
+
+
+Main -> IndexAdvisor : make_env()
+activate IndexAdvisor
+
+create ActionManager
+IndexAdvisor -> ActionManager : create
+activate ActionManager
+ActionManager -> IndexAdvisor : ok
+deactivate ActionManager
+
+create ObservationManager
+IndexAdvisor -> ObservationManager : create
+activate ObservationManager
+ObservationManager -> IndexAdvisor : ok
+deactivate ObservationManager
+
+create RewardManager
+IndexAdvisor -> RewardManager : create
+activate RewardManager
+RewardManager -> IndexAdvisor : ok
+deactivate RewardManager
+
+create Env
+IndexAdvisor -> Env : gym.make(ActionManager, ObservationManager, RewardManager)
+activate Env
+Env -> IndexAdvisor : ok
+deactivate Env
+
+IndexAdvisor -> Main : Env
+deactivate IndexAdvisor
+
+create MaskablePPO
+Main -> MaskablePPO : create(Env)
+activate MaskablePPO
+MaskablePPO -> Main : model
+deactivate MaskablePPO
+
+Main -> IndexAdvisor : save(model)
+activate IndexAdvisor
+IndexAdvisor -> Main : ok
+deactivate IndexAdvisor
+
+Main -> MaskablePPO : learn()
+activate MaskablePPO
+MaskablePPO -> Main : ok
+deactivate MaskablePPO
+
+Main -> IndexAdvisor : генерация отчета
+activate IndexAdvisor
+IndexAdvisor -> Main : report.txt
+deactivate IndexAdvisor
+
+deactivate Main
+
+@enduml
