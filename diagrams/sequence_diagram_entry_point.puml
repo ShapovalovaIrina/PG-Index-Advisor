@@ -25,6 +25,12 @@ deactivate Schema
 create WorkloadGenerator
 IndexAdvisor -> WorkloadGenerator : create
 activate WorkloadGenerator
+
+create QueryStorage
+WorkloadGenerator -> QueryStorage :create
+activate QueryStorage
+QueryStorage -> WorkloadGenerator : список запросов
+deactivate QueryStorage
 WorkloadGenerator -> IndexAdvisor : нагрузка, список атрибутов \nдля индексирования
 deactivate WorkloadGenerator
 
