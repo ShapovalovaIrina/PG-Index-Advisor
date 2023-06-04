@@ -3,7 +3,7 @@ import copy
 import logging
 
 from pg_index_advisor.gym_env.action_manager import MultiColumnIndexActionManager, FORBIDDEN_ACTION, ALLOW_TO_DELETE, ALLOW_TO_CREATE
-from pg_index_advisor.schema.structures import Table, Column, RealIndex, PotentialIndex, Query, Workload
+from pg_index_advisor.database.structures import Table, Column, RealIndex, PotentialIndex, Query, Workload
 
 
 class TestActionManager(unittest.TestCase):

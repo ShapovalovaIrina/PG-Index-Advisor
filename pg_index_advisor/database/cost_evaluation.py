@@ -2,7 +2,7 @@ import datetime
 import logging
 
 from index_selection_evaluation.selection.cost_evaluation import CostEvaluation
-from pg_index_advisor.schema.what_if_index import WhatIfIndex
+from pg_index_advisor.database.what_if_index_manager import WhatIfIndexManager
 
 class CostEvaluationWithHidingIndex(CostEvaluation):
     def __init__(self, db_connector, cost_estimation="whatif"):
@@ -12,7 +12,7 @@ class CostEvaluationWithHidingIndex(CostEvaluation):
         self.cost_estimation = cost_estimation
 
         logging.info("Cost estimation with " + self.cost_estimation)
-        self.what_if = WhatIfIndex(db_connector)
+        self.what_if = WhatIfIndexManager(db_connector)
 
         self.current_indexes = set()
         self.current_deleted_indexes = set()

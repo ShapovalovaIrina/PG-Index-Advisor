@@ -24,16 +24,13 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.vec_env import sync_envs_normalization
 from stable_baselines3.common.utils import set_random_seed
 
-from pg_index_advisor.schema.schema import Schema
+from pg_index_advisor.database.schema import Schema
 from pg_index_advisor.workload_generator import WorkloadGenerator
-from pg_index_advisor.embeddings.workload_embedder import PlanEmbedderLSI
 from pg_index_advisor.gym_env.common import EnvironmentType
 from pg_index_advisor.gym_env.action_manager import MultiColumnIndexActionManager as ActionManager
 from pg_index_advisor.gym_env.observation_manager import SingleColumnIndexPlanEmbeddingObservationManagerWithCost as ObservationManager
 from pg_index_advisor.gym_env.reward_manager import CostAndStorageRewardManager as RewardManager
 from pg_index_advisor.gym_env.env import PGIndexAdvisorEnv
-
-from index_selection_evaluation.selection.utils import b_to_mb
 
 
 def mask_fn(env: PGIndexAdvisorEnv) -> List[bool]:
@@ -75,7 +72,7 @@ class IndexAdvisor(object):
 
     def prepare(self, budget=None):
         """
-        Get filtered DB schema elements:
+        Get filtered DB database elements:
             - columns
             - indexes
         """
@@ -130,13 +127,6 @@ class IndexAdvisor(object):
             self.config["logging"]
         )
 
-        self.workload_embedder = PlanEmbedderLSI(
-            self.workload_generator.query_texts,
-            self.config["workload_embedder"]["representation_size"],
-            self.globally_indexable_columns,
-            self.schema.db_config
-        )
-
         # TODO: in original paper there is multi_validation_wl, needs to figure out why this is
         assert len(self.workload_generator.wl_validation) == 1, \
             "Expected wl_validation to be one element list"
@@ -160,7 +150,12 @@ class IndexAdvisor(object):
                 self.number_of_actions = action_manager.number_of_actions
 
             observation_manager_config = {
-                "workload_embedder": self.workload_embedder,
+                "workload_embedder": {
+                    "query_texts": self.workload_generator.query_texts,
+                    "representation_size": self.config["workload_embedder"]["representation_size"],
+                    "globally_indexable_columns": copy.copy(self.globally_indexable_columns),
+                    "db_config": self.schema.db_config
+                },
                 "workload_size": self.config["workload"]["size"]
             }
             observation_manager = ObservationManager(

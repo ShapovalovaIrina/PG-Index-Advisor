@@ -2,9 +2,9 @@ import itertools
 import logging
 from typing import Union, Tuple, List
 
-from pg_index_advisor.schema.cost_evaluation import CostEvaluationWithHidingIndex as CostEvaluation
-from pg_index_advisor.schema.structures import RealIndex, PotentialIndex, Column
-from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector
+from pg_index_advisor.database.cost_evaluation import CostEvaluationWithHidingIndex as CostEvaluation
+from pg_index_advisor.database.structures import RealIndex, PotentialIndex, Column
+from pg_index_advisor.database.db_connector import UserPostgresDatabaseConnector
 
 
 # Todo: This could be improved by passing index candidates as input

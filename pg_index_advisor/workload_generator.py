@@ -8,7 +8,7 @@ import numpy as np
 from typing import List, Tuple
 from sql_metadata import Parser
 from pglast import fingerprint
-from pg_index_advisor.schema.structures import Query, Workload
+from pg_index_advisor.database.structures import Query, Workload
 
 
 class WorkloadGenerator(object):

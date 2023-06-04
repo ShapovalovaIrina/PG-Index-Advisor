@@ -8,7 +8,7 @@ from gym import spaces
 from typing import List, Tuple, Set
 
 from index_selection_evaluation.selection.utils import b_to_mb
-from pg_index_advisor.schema.structures import RealIndex, PotentialIndex, Column
+from pg_index_advisor.database.structures import RealIndex, PotentialIndex, Column
 from pg_index_advisor.utils import add_if_not_exists, remove_if_exists, index_from_column_combination
 
 FORBIDDEN_ACTION = 0

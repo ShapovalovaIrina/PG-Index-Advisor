@@ -1,9 +1,9 @@
 from index_selection_evaluation.selection.what_if_index_creation import WhatIfIndexCreation
-from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector
-from pg_index_advisor.schema.structures import PotentialIndex
+from pg_index_advisor.database.db_connector import UserPostgresDatabaseConnector
+from pg_index_advisor.database.structures import PotentialIndex
 
 
-class WhatIfIndex(WhatIfIndexCreation):
+class WhatIfIndexManager(WhatIfIndexCreation):
     db_connector: UserPostgresDatabaseConnector
     def __init__(self, db_connector: UserPostgresDatabaseConnector):
         WhatIfIndexCreation.__init__(self, db_connector)

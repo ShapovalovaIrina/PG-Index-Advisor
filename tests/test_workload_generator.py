@@ -1,8 +1,8 @@
 import unittest
 
-from pg_index_advisor.schema.structures import View, Query
+from pg_index_advisor.database.structures import View, Query
 from pg_index_advisor.workload_generator import WorkloadGenerator
-from pg_index_advisor.schema.schema import Table, Column
+from pg_index_advisor.database.schema import Table, Column
 from tests.resources.constants import *
 
 

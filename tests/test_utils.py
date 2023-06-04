@@ -1,7 +1,7 @@
 import unittest
 
 from pg_index_advisor import utils
-from pg_index_advisor.schema.structures import Table, Column
+from pg_index_advisor.database.structures import Table, Column
 
 from tests.resources.constants import *
 

@@ -13,10 +13,10 @@ from pg_index_advisor.gym_env.common import EnvironmentType, IndexType
 from pg_index_advisor.gym_env.action_manager import MultiColumnIndexActionManager as ActionManager
 from pg_index_advisor.gym_env.observation_manager import SingleColumnIndexPlanEmbeddingObservationManagerWithCost as ObservationManager
 from pg_index_advisor.gym_env.reward_manager import CostAndStorageRewardManager as RewardManager
-from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector as DatabaseConnector
+from pg_index_advisor.database.db_connector import UserPostgresDatabaseConnector as DatabaseConnector
 from pg_index_advisor.utils import remove_if_exists
-from pg_index_advisor.schema.structures import PotentialIndex
-from pg_index_advisor.schema.cost_evaluation import CostEvaluationWithHidingIndex as CostEvaluation
+from pg_index_advisor.database.structures import PotentialIndex
+from pg_index_advisor.database.cost_evaluation import CostEvaluationWithHidingIndex as CostEvaluation
 from index_selection_evaluation.selection.utils import b_to_mb
 from index_selection_evaluation.selection.workload import Workload
 

@@ -113,7 +113,7 @@ class Schema(object):
     def _filter_tables(self, table_filters):
         for (filter_name, filter_value) in table_filters.items():
             filter_class = getattr(
-                importlib.import_module("pg_index_advisor.schema.filters"),
+                importlib.import_module("pg_index_advisor.database.filters"),
                 filter_name
             )
             filter_instance = filter_class(filter_value, self.db_config)
@@ -122,7 +122,7 @@ class Schema(object):
     def _filter_indexes(self, index_filters):
         for (filter_name, filter_value) in index_filters.items():
             filter_class = getattr(
-                importlib.import_module("pg_index_advisor.schema.filters"),
+                importlib.import_module("pg_index_advisor.database.filters"),
                 filter_name
             )
             filter_instance = filter_class(filter_value, self.db_config)

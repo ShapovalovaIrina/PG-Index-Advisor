@@ -3,6 +3,7 @@ import logging
 import numpy as np
 
 from gym import spaces
+from pg_index_advisor.gym_env.embeddings.workload_embedder import PlanEmbedderLSI
 
 
 VERY_HIGH_BUDGET = 100_000_000_000
@@ -57,7 +58,14 @@ class EmbeddingObservationManager(ObservationManager):
     def __init__(self, number_of_actions, config):
         ObservationManager.__init__(self, number_of_actions)
 
-        self.workload_embedder = config["workload_embedder"]
+        workload_embedder_config = config["workload_embedder"]
+        self.workload_embedder = PlanEmbedderLSI(
+            workload_embedder_config["query_texts"],
+            workload_embedder_config["representation_size"],
+            workload_embedder_config["globally_indexable_columns"],
+            workload_embedder_config["db_config"]
+        )
+
         self.representation_size = self.workload_embedder.representation_size
         self.workload_size = config["workload_size"]
 

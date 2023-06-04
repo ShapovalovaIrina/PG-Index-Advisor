@@ -1,8 +1,8 @@
 import unittest
 
-from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector
-from pg_index_advisor.schema.schema import Schema
-from pg_index_advisor.schema.structures import Table, Column, RealIndex, View
+from pg_index_advisor.database.db_connector import UserPostgresDatabaseConnector
+from pg_index_advisor.database.schema import Schema
+from pg_index_advisor.database.structures import Table, Column, RealIndex, View
 
 from tests.resources.constants import *
 

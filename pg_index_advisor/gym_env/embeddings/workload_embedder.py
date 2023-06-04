@@ -2,12 +2,12 @@ import logging
 
 import gensim
 
-from pg_index_advisor.schema.cost_evaluation import CostEvaluationWithHidingIndex as CostEvaluation
+from pg_index_advisor.database.cost_evaluation import CostEvaluationWithHidingIndex as CostEvaluation
 from index_selection_evaluation.selection.index import Index
 from index_selection_evaluation.selection.workload import Query
 
 from .boo import BagOfOperators
-from pg_index_advisor.schema.db_connector import UserPostgresDatabaseConnector
+from pg_index_advisor.database.db_connector import UserPostgresDatabaseConnector
 
 
 class WorkloadEmbedder(object):

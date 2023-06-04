@@ -4,7 +4,6 @@ import time
 
 from index_selection_evaluation.selection.dbms.postgres_dbms import PostgresDatabaseConnector
 from index_selection_evaluation.selection.database_connector import DatabaseConnector
-from pg_index_advisor.schema.structures import PotentialIndex
 
 
 class UserPostgresDatabaseConnector(PostgresDatabaseConnector):
