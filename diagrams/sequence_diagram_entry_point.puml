@@ -3,12 +3,16 @@
 
 skinparam responseMessageBelowArrow true
 
-participant EntryPoint
+participant Main
+
+activate Main
 
 create IndexAdvisor
-EntryPoint -> IndexAdvisor : create
+activate IndexAdvisor
+Main -> IndexAdvisor : create
+deactivate IndexAdvisor
 
-EntryPoint -> IndexAdvisor : prepare()
+Main -> IndexAdvisor : prepare()
 activate IndexAdvisor
 
 create Schema
@@ -28,11 +32,11 @@ IndexAdvisor -> IndexAdvisor : перестановки атрибутов \nW_m
 
 IndexAdvisor -> IndexAdvisor : оценка размеров индексов
 
-IndexAdvisor -> EntryPoint : ok
+IndexAdvisor -> Main : ok
 deactivate IndexAdvisor
 
 
-EntryPoint -> IndexAdvisor : make_env()
+Main -> IndexAdvisor : make_env()
 activate IndexAdvisor
 
 create ActionManager
@@ -59,24 +63,30 @@ activate Env
 Env -> IndexAdvisor : ok
 deactivate Env
 
-IndexAdvisor -> EntryPoint : Env
+IndexAdvisor -> Main : Env
 deactivate IndexAdvisor
 
 create MaskablePPO
-EntryPoint -> MaskablePPO : create(Env)
+Main -> MaskablePPO : create(Env)
 activate MaskablePPO
-MaskablePPO -> EntryPoint : model
+MaskablePPO -> Main : model
 deactivate MaskablePPO
 
-EntryPoint -> IndexAdvisor : save(model)
-IndexAdvisor -> EntryPoint : ok
+Main -> IndexAdvisor : save(model)
+activate IndexAdvisor
+IndexAdvisor -> Main : ok
+deactivate IndexAdvisor
 
-EntryPoint -> MaskablePPO : learn()
+Main -> MaskablePPO : learn()
 activate MaskablePPO
-MaskablePPO -> EntryPoint : ok
+MaskablePPO -> Main : ok
 deactivate MaskablePPO
 
-EntryPoint -> IndexAdvisor : генерация отчета
-IndexAdvisor -> EntryPoint : report.txt
+Main -> IndexAdvisor : генерация отчета
+activate IndexAdvisor
+IndexAdvisor -> Main : report.txt
+deactivate IndexAdvisor
+
+deactivate Main
 
 @enduml
