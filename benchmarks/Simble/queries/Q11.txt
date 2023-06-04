@@ -1,1 +1,0 @@
-SELECT p0."count", p0."age", p0."review_status" FROM "profile_request_stats_view" AS p0;

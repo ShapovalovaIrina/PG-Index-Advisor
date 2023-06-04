@@ -1,4 +1,0 @@
-UPDATE "policies" AS p0
-SET "policy_status" = 'inactive'
-WHERE ((((p0."policy_status" = 'pending') AND (p0."inserted_at" <= now())) AND (p0."payment_details" IS NULL)) AND
-       (p0."payment_id" IS NULL));

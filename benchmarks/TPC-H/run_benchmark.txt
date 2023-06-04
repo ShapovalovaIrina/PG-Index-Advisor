@@ -1,2 +1,0 @@
-Базовый запуск: pgbench -h localhost -p 6543 -U postgres -t 10 -f ~/PG-Index-Advisor/benchmarks/TPC-H/query_1.sql -n tpcc
-С временем выполнения отдельных запросов: pgbench -h localhost -p 6543 -U postgres -t 10 -f ~/PG-Index-Advisor/benchmarks/TPC-H/query_1.sql -n -r tpcc

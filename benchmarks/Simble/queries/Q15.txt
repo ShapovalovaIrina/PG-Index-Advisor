@@ -1,6 +1,0 @@
-SELECT count(upload_parts_count) FROM "trips" AS t0 WHERE (t0."policy_id" = 347284);
-SELECT count(upload_parts_count) FROM "trips" AS t0 WHERE (t0."policy_id" = 82984);
-SELECT count(upload_parts_count) FROM "trips" AS t0 WHERE (t0."policy_id" = 1643);
-SELECT count(upload_parts_count) FROM "trips" AS t0 WHERE (t0."policy_id" = 15000);
-SELECT count(upload_parts_count) FROM "trips" AS t0 WHERE (t0."policy_id" = 14);
-SELECT count(upload_parts_count) FROM "trips" AS t0 WHERE (t0."policy_id" = 408863);
